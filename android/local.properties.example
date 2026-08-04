@@ -1,0 +1,7 @@
+# Salin menjadi android/local.properties jika Flutter belum membuatnya otomatis.
+# Gunakan path absolut sesuai workstation developer dan jangan commit local.properties.
+sdk.dir=/path/to/Android/sdk
+flutter.sdk=/path/to/flutter
+flutter.buildMode=debug
+flutter.versionName=1.2.0
+flutter.versionCode=3
