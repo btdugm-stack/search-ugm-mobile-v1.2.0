@@ -73,3 +73,15 @@ build/
 .dart_tool/
 .metadata
 
+# Allow committing the built release APK
+# (must come after /build/, build/, and *.apk rules above)
+!/build/
+/build/*
+!/build/app/
+/build/app/*
+!/build/app/outputs/
+/build/app/outputs/*
+!/build/app/outputs/flutter-apk/
+/build/app/outputs/flutter-apk/*
+!/build/app/outputs/flutter-apk/*.apk
+
