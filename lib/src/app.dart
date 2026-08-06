@@ -561,10 +561,10 @@ class ServicesScreen extends StatelessWidget {
   const ServicesScreen({super.key});
   static const services = [
     ('SIMASTER', 'Sistem informasi akademik UGM', 'https://simaster.ugm.ac.id'),
-    ('SIA', 'Sistem Informasi Akademik', 'https://sia.ugm.ac.id'),
-    ('Griffith', 'Keuangan dan perbendaharaan', 'https://griffith.ugm.ac.id'),
+    ('ULT', 'Unit Layanan Terpadu', 'https://ult.ugm.ac.id/eservices/portal/'),
+    ('Dashboard UGM', 'UGM Dalam Angka', 'https://dashboard.ugm.ac.id/public/ugm_dalam_angka/view'),
     ('E-Learning UGM', 'Pembelajaran daring UGM', 'https://elok.ugm.ac.id'),
-    ('UGM Mail', 'Layanan surel resmi UGM', 'https://mail.ugm.ac.id'),
+    ('PIONIR', 'PIONIR Gadjah Mada 2026', 'https://pionir.ugm.ac.id/'),
   ];
 
   @override
