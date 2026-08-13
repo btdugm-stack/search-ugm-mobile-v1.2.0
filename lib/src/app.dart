@@ -141,6 +141,8 @@ class _HomeScreenState extends State<HomeScreen> {
     (label: 'Pidato & Laporan', type: 'pidato', icon: Icons.record_voice_over_outlined),
     (label: 'Fasilitas Kampus', type: 'facility', icon: Icons.apartment_outlined),
     (label: 'Agenda / Acara', type: 'event', icon: Icons.event_outlined),
+    (label: 'Karir', type: 'karir', icon: Icons.work_outline),
+    (label: 'Video', type: 'video', icon: Icons.play_circle_outline),
   ];
 
   @override
@@ -248,7 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )),
             const SizedBox(height: 10),
             AnimatedCrossFade(
-              firstChild: quickAccessGrid(explore.take(8).toList()),
+              firstChild: quickAccessGrid(explore.take(10).toList()),
               secondChild: quickAccessGrid(explore),
               crossFadeState: expanded
                   ? CrossFadeState.showSecond
@@ -339,7 +341,7 @@ class _SearchScreenState extends State<SearchScreen> {
   static const types = <String, String>{
     'all': 'Semua', 'service': 'Layanan', 'news': 'Berita', 'product': 'Produk', 'people': 'Dosen',
     'publication': 'Publikasi', 'patent': 'HKI', 'tech4disaster': 'Tech4disaster', 'legal': 'Hukum',
-    'pidato': 'Pidato', 'facility': 'Fasilitas', 'event': 'Agenda',
+    'pidato': 'Pidato', 'facility': 'Fasilitas', 'event': 'Agenda', 'karir': 'Karir', 'video': 'Video',
   };
 
   int get activeFilters => (dharma.isNotEmpty ? 1 : 0) + (year.isNotEmpty ? 1 : 0);

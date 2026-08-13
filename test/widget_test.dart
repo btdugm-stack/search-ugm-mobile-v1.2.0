@@ -12,7 +12,7 @@ void main() {
     expect(find.text('Profil'), findsNothing);
     expect(find.text('Akses Cepat'), findsOneWidget);
 
-    await tester.tap(find.text('Lihat semua (11)'));
+    await tester.tap(find.text('Lihat semua (13)'));
     await tester.pump(const Duration(milliseconds: 180));
     expect(tester.takeException(), isNull);
     await tester.pumpAndSettle();

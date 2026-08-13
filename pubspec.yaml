@@ -1,7 +1,7 @@
 name: search_ugm_mobile
 description: Search UGM Digital Services Hub mobile application.
 publish_to: none
-version: 1.2.0+3
+version: 1.3.0+4
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -14,6 +14,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
