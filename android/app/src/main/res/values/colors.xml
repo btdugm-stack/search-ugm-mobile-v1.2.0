@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Splash navy (Sprint 5.4) — navy.950 dari token Bagian 7 -->
+    <color name="launch_background">#0B142E</color>
 </resources>

@@ -92,6 +92,7 @@ class Service {
     required this.audience,
     required this.dharma,
     required this.isExternal,
+    this.guideUrl = '',
   });
 
   final String id;
@@ -102,6 +103,7 @@ class Service {
   final String audience;
   final String dharma;
   final bool isExternal;
+  final String guideUrl;
 
   factory Service.fromJson(Map<String, dynamic> json) => Service(
         id: '${json['id'] ?? ''}',
@@ -114,5 +116,6 @@ class Service {
         isExternal: json['is_external'] == 1 ||
             json['is_external'] == '1' ||
             json['is_external'] == true,
+        guideUrl: '${json['guide_url'] ?? ''}',
       );
 }

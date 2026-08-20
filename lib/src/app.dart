@@ -515,6 +515,30 @@ class _SearchScreenState extends State<SearchScreen> {
     if (mounted) setState(() => history = result);
   }
 
+  Future<void> _removeHistoryItem(String item) async {
+    final next = history.where((h) => h != item).toList();
+    await DeviceBridge.saveHistory(next);
+    await _loadHistory();
+  }
+
+  Future<void> _clearHistory() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus semua histori?'),
+        content: const Text('Riwayat pencarian yang tersimpan lokal di perangkat akan dihapus.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await DeviceBridge.saveHistory(const []);
+      await _loadHistory();
+    }
+  }
+
   void _onQueryChanged(String value) {
     _debounce?.cancel();
     if (value.trim().length < 2) {
@@ -716,17 +740,32 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
           if (history.isNotEmpty) ...[
-            const Text('Pencarian Terakhir', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: navy)),
+            Row(children: [
+              const Expanded(child: Text('Pencarian Terakhir', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: navy))),
+              TextButton(onPressed: _clearHistory, child: const Text('Hapus semua')),
+            ]),
             const SizedBox(height: 4),
-            ...history.take(8).map((h) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.history, size: 19, color: textSecondary),
-                  title: Text(h, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  onTap: () {
-                    controller.text = h;
-                    search();
-                  },
+            ...history.take(8).map((h) => Dismissible(
+                  key: ValueKey('hist-$h'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: const Color(0xFFFDECEC),
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    child: const Icon(Icons.delete_outline, color: Color(0xFFB3261E)),
+                  ),
+                  onDismissed: (_) => _removeHistoryItem(h),
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.history, size: 19, color: textSecondary),
+                    title: Text(h, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: const Icon(Icons.north_west, size: 17),
+                    onTap: () {
+                      controller.text = h;
+                      search();
+                    },
+                  ),
                 )),
             const SizedBox(height: 14),
           ],
@@ -1262,10 +1301,28 @@ class _ServicesScreenState extends State<ServicesScreen> {
                             Expanded(child: Text(item.owner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: ugmBlue))),
                           ]),
                         ],
+                        const SizedBox(height: 5),
+                        Row(children: [
+                          Icon(item.isExternal ? Icons.public : Icons.lock_outline, size: 12, color: textSecondary),
+                          const SizedBox(width: 4),
+                          Text(item.isExternal ? 'Situs eksternal' : 'Layanan UGM', style: const TextStyle(fontSize: 11, color: textSecondary)),
+                        ]),
                       ],
                     ),
                   ),
-                  trailing: const Icon(Icons.open_in_new, size: 18),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (item.guideUrl.isNotEmpty)
+                        IconButton(
+                          tooltip: 'Panduan penggunaan',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => DeviceBridge.openUrl(item.guideUrl),
+                          icon: const Icon(Icons.help_outline, size: 19),
+                        ),
+                      const Icon(Icons.open_in_new, size: 18),
+                    ],
+                  ),
                 ),
               ),
             )),
@@ -1334,6 +1391,7 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
   String category = '';
   Facility? selected;
   bool showGestureHint = true;
+  bool listMode = false;
   final searchController = TextEditingController();
 
   List<Facility> get filtered => facilities.where((item) {
@@ -1416,15 +1474,154 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
     }
   }
 
+  List<String> get categories =>
+      facilities.map((e) => e.category).where((e) => e.isNotEmpty).toSet().toList()..sort();
+
+  Widget _modeToggle() {
+    return SegmentedButton<bool>(
+      segments: const [
+        ButtonSegment(value: false, label: Text('Peta'), icon: Icon(Icons.map_outlined, size: 15)),
+        ButtonSegment(value: true, label: Text('Daftar'), icon: Icon(Icons.view_list_outlined, size: 15)),
+      ],
+      selected: {listMode},
+      onSelectionChanged: (selection) => setState(() => listMode = selection.first),
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
+  Widget _searchBar() {
+    return Material(
+      elevation: 8,
+      shadowColor: Colors.black26,
+      borderRadius: BorderRadius.circular(24),
+      color: Colors.white,
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Kembali',
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back),
+          ),
+          Expanded(
+            child: TextField(
+              controller: searchController,
+              onChanged: (value) => setState(() {
+                query = value;
+                selected = null;
+              }),
+              decoration: const InputDecoration(
+                hintText: 'Cari fasilitas di UGM',
+                fillColor: Colors.transparent,
+                contentPadding: EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          if (query.isNotEmpty)
+            IconButton(
+              tooltip: 'Hapus pencarian',
+              onPressed: () {
+                searchController.clear();
+                setState(() => query = '');
+              },
+              icon: const Icon(Icons.close),
+            ),
+          Badge(
+            isLabelVisible: category.isNotEmpty,
+            child: IconButton(
+              tooltip: 'Filter kategori',
+              onPressed: () => selectCategory(categories),
+              icon: const Icon(Icons.tune),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterChips() {
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _MapFilterChip(
+            label: 'Semua',
+            selected: category.isEmpty,
+            onTap: () => setState(() => category = ''),
+          ),
+          ...categories.take(5).map(
+                (item) => _MapFilterChip(
+                  label: item,
+                  selected: category == item,
+                  onTap: () => setState(() => category = item),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
+  /// Mode daftar: daftar fasilitas penuh (Sprint 5.2 toggle Peta|Daftar).
+  Widget _buildListMode() {
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            child: Column(
+              children: [
+                _searchBar(),
+                const SizedBox(height: 10),
+                _filterChips(),
+                const SizedBox(height: 8),
+                Align(alignment: Alignment.centerLeft, child: _modeToggle()),
+              ],
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? const _EmptyState(icon: Icons.location_off_outlined, title: 'Tidak ada fasilitas', subtitle: 'Coba kata kunci atau kategori lain.')
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final item = filtered[i];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          selected: selected?.id == item.id,
+                          leading: CircleAvatar(
+                            backgroundColor: facilityCategoryColor(item.category).withValues(alpha: .15),
+                            child: Icon(Icons.location_on_outlined, color: facilityCategoryColor(item.category)),
+                          ),
+                          title: Text(item.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: Text('${item.category} • ${item.owner}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                          trailing: const Icon(Icons.navigate_next),
+                          onTap: () => setState(() => selected = item),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final categories = facilities.map((e) => e.category).where((e) => e.isNotEmpty).toSet().toList()..sort();
     return Scaffold(
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : error != null
               ? _ErrorView(message: error!, retry: load)
-              : Stack(
+              : listMode
+                  ? _buildListMode()
+                  : Stack(
                   children: [
                     Positioned.fill(
                       child: UgmTileMap(
@@ -1439,73 +1636,11 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Material(
-                              elevation: 8,
-                              shadowColor: Colors.black26,
-                              borderRadius: BorderRadius.circular(24),
-                              color: Colors.white,
-                              child: Row(
-                                children: [
-                                  IconButton(
-                                    tooltip: 'Kembali',
-                                    onPressed: () => Navigator.pop(context),
-                                    icon: const Icon(Icons.arrow_back),
-                                  ),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: searchController,
-                                      onChanged: (value) => setState(() {
-                                        query = value;
-                                        selected = null;
-                                      }),
-                                      decoration: const InputDecoration(
-                                        hintText: 'Cari fasilitas di UGM',
-                                        fillColor: Colors.transparent,
-                                        contentPadding: EdgeInsets.symmetric(vertical: 14),
-                                      ),
-                                    ),
-                                  ),
-                                  if (query.isNotEmpty)
-                                    IconButton(
-                                      tooltip: 'Hapus pencarian',
-                                      onPressed: () {
-                                        searchController.clear();
-                                        setState(() => query = '');
-                                      },
-                                      icon: const Icon(Icons.close),
-                                    ),
-                                  Badge(
-                                    isLabelVisible: category.isNotEmpty,
-                                    child: IconButton(
-                                      tooltip: 'Filter kategori',
-                                      onPressed: () => selectCategory(categories),
-                                      icon: const Icon(Icons.tune),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            _searchBar(),
                             const SizedBox(height: 10),
-                            SizedBox(
-                              height: 40,
-                              child: ListView(
-                                scrollDirection: Axis.horizontal,
-                                children: [
-                                  _MapFilterChip(
-                                    label: 'Semua',
-                                    selected: category.isEmpty,
-                                    onTap: () => setState(() => category = ''),
-                                  ),
-                                  ...categories.take(5).map(
-                                    (item) => _MapFilterChip(
-                                      label: item,
-                                      selected: category == item,
-                                      onTap: () => setState(() => category = item),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            _filterChips(),
+                            const SizedBox(height: 8),
+                            Align(alignment: Alignment.centerLeft, child: _modeToggle()),
                           ],
                         ),
                       ),
@@ -1683,6 +1818,23 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
   }
 }
 
+/// Warna marker/tile berdasarkan kategori fasilitas (Sprint 5.2).
+/// Palet diambil dari token Bagian 7; kategori kosong memakai biru primer.
+Color facilityCategoryColor(String category) {
+  if (category.isEmpty) return ugmBlue;
+  const palette = <Color>[
+    Color(0xFF003F88), // blue.700
+    Color(0xFFC8973A), // goni.500
+    Color(0xFF3B6697), // navy.500
+    Color(0xFF4A98EB), // blue.400
+    Color(0xFF047857), // success
+    Color(0xFF0E5EAD), // blue.600
+    Color(0xFF865D25), // goni.700
+    Color(0xFF1D4ED8), // information
+  ];
+  return palette[category.hashCode.abs() % palette.length];
+}
+
 class _MapFilterChip extends StatelessWidget {
   const _MapFilterChip({
     required this.label,
@@ -1808,6 +1960,8 @@ class _UgmTileMapState extends State<UgmTileMap> {
   /// peta awal tidak menampilkan ratusan pin individu (UX-04).
   static const _clusterGrid = 72.0;
 
+  Color _colorForCategory(String category) => facilityCategoryColor(category);
+
   List<Widget> _buildMarkers(BoxConstraints size, math.Point<double> center) {
     final cells = <String, List<({Facility item, math.Point<double> pos})>>{};
     for (final item in widget.facilities) {
@@ -1823,6 +1977,7 @@ class _UgmTileMapState extends State<UgmTileMap> {
       if (group.length == 1) {
         final item = group.first.item;
         final p = group.first.pos;
+        final markerColor = widget.selected?.id == item.id ? Colors.orange : _colorForCategory(item.category);
         widgets.add(Positioned(
           left: p.x - 19,
           top: p.y - 38,
@@ -1833,7 +1988,7 @@ class _UgmTileMapState extends State<UgmTileMap> {
               onTap: () => widget.onSelect(item),
               child: Icon(
                 Icons.location_pin,
-                color: widget.selected?.id == item.id ? Colors.orange : ugmBlue,
+                color: markerColor,
                 size: widget.selected?.id == item.id ? 46 : 38,
               ),
             ),

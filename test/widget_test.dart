@@ -48,6 +48,26 @@ void main() {
     expect(item.publishDate, '12 Agustus 2026');
   });
 
+  test('facilityCategoryColor konsisten per kategori (Sprint 5)', () {
+    final a1 = facilityCategoryColor('Fasilitas Olahraga');
+    final a2 = facilityCategoryColor('Fasilitas Olahraga');
+    final b = facilityCategoryColor('Kesehatan');
+    expect(a1, a2);
+    expect(a1 == b, isFalse);
+    expect(facilityCategoryColor(''), ugmBlue);
+  });
+
+  test('Service.fromJson membaca guide_url & is_external (Sprint 5)', () {
+    final s = Service.fromJson({
+      'id': '1',
+      'name': 'Layanan X',
+      'is_external': 0,
+      'guide_url': 'https://ugm.ac.id/panduan',
+    });
+    expect(s.isExternal, isFalse);
+    expect(s.guideUrl, 'https://ugm.ac.id/panduan');
+  });
+
   testWidgets('peta menerima gesture pinch-to-zoom tanpa error', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
