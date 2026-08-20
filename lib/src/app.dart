@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api_client.dart';
 import 'device_bridge.dart';
@@ -39,6 +41,13 @@ class SearchUgmApp extends StatelessWidget {
           ),
         ),
         home: const MainShell(),
+        locale: const Locale('id'),
+        supportedLocales: const [Locale('id'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
       );
 }
 
@@ -739,11 +748,20 @@ class _AiScreenState extends State<AiScreen> {
   final sessionId = 'mobile-${DateTime.now().millisecondsSinceEpoch}';
   final messages = <({bool user, String text, List<SearchItem> sources})>[];
   bool loading = false;
+  bool _canSend = false;
+
+  static const starterPrompts = [
+    'Apa tugas mahasiswa KKN?',
+    'Bagaimana cara daftar SIMASTER?',
+    'Kapan pendaftaran beasiswa dibuka?',
+    'Apa saja fasilitas di UGM?',
+  ];
 
   @override
   void initState() {
     super.initState();
     controller = TextEditingController(text: widget.initialPrompt);
+    _canSend = widget.initialPrompt.trim().isNotEmpty;
     if (widget.initialPrompt.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) send();
@@ -761,6 +779,7 @@ class _AiScreenState extends State<AiScreen> {
     final question = controller.text.trim();
     if (question.isEmpty || loading) return;
     controller.clear();
+    setState(() => _canSend = false);
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() { messages.add((user: true, text: question, sources: const [])); loading = true; });
     try {
@@ -773,6 +792,22 @@ class _AiScreenState extends State<AiScreen> {
     }
   }
 
+  void _submitPrompt(String prompt) {
+    controller.text = prompt;
+    send();
+  }
+
+  Future<void> _copyAnswer(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jawaban disalin ke papan klip')));
+    }
+  }
+
+  void _feedback() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Terima kasih atas masukannya.')));
+  }
+
   @override
   Widget build(BuildContext context) => Column(children: [
         Container(
@@ -781,7 +816,30 @@ class _AiScreenState extends State<AiScreen> {
           child: const Row(children: [Icon(Icons.auto_awesome, color: ugmBlue), SizedBox(width: 10), Expanded(child: Text('DSH Menjawab', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))), Chip(label: Text('SMART'), side: BorderSide.none, backgroundColor: Color(0xFFEAF1FF))]),
         ),
         Expanded(child: messages.isEmpty
-            ? const _EmptyState(icon: Icons.auto_awesome, title: 'Tanyakan apa saja tentang UGM', subtitle: 'Mode Smart menggabungkan penelusuran semantik dan sumber UGM terpercaya.')
+            ? ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  const SizedBox(height: 20),
+                  const Icon(Icons.auto_awesome, size: 54, color: ugmBlue),
+                  const SizedBox(height: 14),
+                  const Text('Tanyakan apa saja tentang UGM', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 7),
+                  const Text('Mode Smart menggabungkan penelusuran semantik dan sumber UGM terpercaya.', textAlign: TextAlign.center, style: TextStyle(color: textSecondary, height: 1.4)),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final prompt in starterPrompts)
+                        ActionChip(
+                          label: Text(prompt, style: const TextStyle(fontSize: 12)),
+                          onPressed: () => _submitPrompt(prompt),
+                        ),
+                    ],
+                  ),
+                ],
+              )
             : ListView.builder(padding: const EdgeInsets.all(16), itemCount: messages.length, itemBuilder: (_, i) {
                 final message = messages[i];
                 return Align(
@@ -819,6 +877,23 @@ class _AiScreenState extends State<AiScreen> {
                           ),
                         )),
                       ],
+                      if (!message.user) ...[
+                        const SizedBox(height: 6),
+                        Wrap(spacing: 2, children: [
+                          TextButton.icon(
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: () => _copyAnswer(message.text),
+                            icon: const Icon(Icons.copy, size: 15),
+                            label: const Text('Salin', style: TextStyle(fontSize: 12)),
+                          ),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: _feedback,
+                            icon: const Icon(Icons.thumb_up_outlined, size: 15),
+                            label: const Text('Membantu', style: TextStyle(fontSize: 12)),
+                          ),
+                        ]),
+                      ],
                     ]),
                   ),
                 );
@@ -833,8 +908,9 @@ class _AiScreenState extends State<AiScreen> {
                 label: 'Tanya lebih lanjut',
                 child: TextField(
                   controller: controller,
-                  maxLines: 3,
+                  maxLines: 4,
                   minLines: 1,
+                  onChanged: (value) => setState(() => _canSend = value.trim().isNotEmpty),
                   onSubmitted: (_) => send(),
                   decoration: const InputDecoration(hintText: 'Tanya lebih lanjut…', prefixIcon: Icon(Icons.mic_none)),
                 ),
@@ -843,7 +919,7 @@ class _AiScreenState extends State<AiScreen> {
             const SizedBox(width: 8),
             IconButton.filled(
               tooltip: 'Kirim',
-              onPressed: send,
+              onPressed: _canSend ? send : null,
               icon: const Icon(Icons.send),
             ),
           ]),
@@ -953,7 +1029,7 @@ class ToolsAiScreen extends StatelessWidget {
         body: ListView(padding: const EdgeInsets.all(16), children: [
           Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(gradient: const LinearGradient(colors: [navy, ugmBlue]), borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.auto_fix_high, color: Colors.white, size: 34), SizedBox(height: 12), Text('AI Tools UGM', style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900)), SizedBox(height: 5), Text('Akses kumpulan alat AI pada versi web Search UGM.', style: TextStyle(color: Colors.white70))])),
           const SizedBox(height: 16),
-          ...tools.map((tool) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Card(child: ListTile(contentPadding: const EdgeInsets.all(12), leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Icon(tool.$3, color: ugmBlue)), title: Text(tool.$1, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(tool.$2)), trailing: const Icon(Icons.open_in_new), onTap: () => DeviceBridge.openUrl(tool.$4))))),
+          ...tools.map((tool) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Card(child: ListTile(contentPadding: const EdgeInsets.all(12), leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Icon(tool.$3, color: ugmBlue)), title: Text(tool.$1, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(tool.$2)), trailing: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.open_in_new, size: 18), const SizedBox(height: 2), const Text('Buka situs UGM', style: TextStyle(fontSize: 9, color: textSecondary))]), onTap: () => DeviceBridge.openUrl(tool.$4))))),
           const Padding(padding: EdgeInsets.only(top: 5), child: Text('Beberapa Tools AI dibuka pada situs resmi UGM dan dapat meminta autentikasi sesuai kebijakan layanannya.', style: TextStyle(fontSize: 12, color: textSecondary))),
         ]),
       );
