@@ -438,10 +438,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(children: [
-                        CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.school, color: ugmBlue)),
-                        SizedBox(width: 12),
-                        Expanded(child: Text('SEARCH UGM', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
+                      Row(children: [
+                        ClipOval(child: Image.asset('assets/icon/app_icon.png', width: 40, height: 40, fit: BoxFit.cover)),
+                        const SizedBox(width: 12),
+                        const Expanded(child: Text('SEARCH UGM', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
                       ]),
                       const Spacer(),
                       const Text(
