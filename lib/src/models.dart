@@ -75,3 +75,38 @@ class ChatAnswer {
   final String answer;
   final List<SearchItem> sources;
 }
+
+class Service {
+  const Service({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.url,
+    required this.owner,
+    required this.audience,
+    required this.dharma,
+    required this.isExternal,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final String url;
+  final String owner;
+  final String audience;
+  final String dharma;
+  final bool isExternal;
+
+  factory Service.fromJson(Map<String, dynamic> json) => Service(
+        id: '${json['id'] ?? ''}',
+        name: '${json['name'] ?? json['title'] ?? 'Tanpa nama'}',
+        description: '${json['description'] ?? ''}',
+        url: '${json['url'] ?? ''}',
+        owner: '${json['owner'] ?? ''}',
+        audience: '${json['audience'] ?? ''}',
+        dharma: '${json['dharma'] ?? ''}',
+        isExternal: json['is_external'] == 1 ||
+            json['is_external'] == '1' ||
+            json['is_external'] == true,
+      );
+}

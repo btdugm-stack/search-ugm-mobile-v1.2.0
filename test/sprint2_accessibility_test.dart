@@ -24,7 +24,8 @@ void main() {
     // Field pencarian Beranda & Cari sama-sama berlabel 'Cari apa saja di UGM'
     expect(bySemanticsWidget('Cari apa saja di UGM'), findsNWidgets(2));
     expect(bySemanticsWidget('Tanya lebih lanjut'), findsOneWidget);
-    expect(bySemanticsWidget('Cari layanan'), findsOneWidget);
+    // Field 'Cari layanan' hanya tampil saat data layanan sukses dimuat
+    // (di widget test HTTP ditolak → error state); diverifikasi live di emulator.
 
     // Tooltip tombol ikon (Bahasa Indonesia) — Tooltip + RawTooltip = 2 node
     expect(byTooltipAll('Cari'), findsWidgets);
@@ -35,25 +36,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('search Layanan melakukan live filter (Sprint 2)', (tester) async {
+  testWidgets('halaman Layanan menampilkan state error saat API gagal (Sprint 5)', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: ServicesScreen())),
     );
-
-    expect(find.text('SIMASTER'), findsOneWidget);
-    expect(find.text('ULT'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField), 'sim');
+    // initState memuat layanan dari API; di test semua HTTP = 400 → error state
     await tester.pump();
-    expect(find.text('SIMASTER'), findsOneWidget);
-    expect(find.text('ULT'), findsNothing);
-
-    await tester.enterText(find.byType(TextField), 'zzz');
     await tester.pump();
-    expect(find.text('Tidak ada layanan yang cocok dengan pencarian.'), findsOneWidget);
-    expect(find.text('SIMASTER'), findsNothing);
+
+    expect(find.text('Data belum dapat dimuat'), findsOneWidget);
+    expect(find.text('Coba lagi'), findsOneWidget);
 
     expect(tester.takeException(), isNull);
+  });
+
+  test('filterServices menyaring nama, deskripsi, dan unit (Sprint 5)', () {
+    const services = [
+      Service(id: '1', name: 'SIMASTER', description: 'Sistem informasi akademik UGM', url: '', owner: 'DAA', audience: '', dharma: '', isExternal: false),
+      Service(id: '2', name: 'ULT', description: 'Unit Layanan Terpadu', url: '', owner: 'Kantor Pusat', audience: '', dharma: '', isExternal: false),
+      Service(id: '3', name: 'E-Learning', description: 'Pembelajaran daring', url: '', owner: 'Biro Transformasi Digital', audience: '', dharma: '', isExternal: false),
+    ];
+
+    expect(filterServices(services, '').length, 3);
+    expect(filterServices(services, 'sim').length, 1);            // nama
+    expect(filterServices(services, 'terpadu').length, 1);        // deskripsi
+    expect(filterServices(services, 'transformasi').length, 1);   // unit pengelola
+    expect(filterServices(services, 'zzz').length, 0);
   });
 
   testWidgets('peta meng-cluster marker berdekatan, tidak menampilkan pin individu (Sprint 2)', (tester) async {

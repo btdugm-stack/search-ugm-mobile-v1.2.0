@@ -87,6 +87,27 @@ class ApiClient {
         .toList();
   }
 
+  Future<List<Service>> services() async {
+    final all = <Service>[];
+    for (var page = 1; page <= 5; page++) {
+      final json = await _get({
+        'action': 'browse',
+        'type': 'service',
+        'page': '$page',
+        'limit': '100',
+        'sort': 'latest',
+      });
+      final data = (json['data'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+      final raw = data['results'] ?? const [];
+      final items = raw is List
+          ? raw.whereType<Map>().map((item) => Service.fromJson(item.cast<String, dynamic>())).toList()
+          : <Service>[];
+      all.addAll(items);
+      if (items.length < 100) break;
+    }
+    return all;
+  }
+
   Future<ChatAnswer> askSmart(String question, String sessionId) async {
     final json = await _post({
       'action': 'rag_answer',

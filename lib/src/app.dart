@@ -926,6 +926,18 @@ class _AiScreenState extends State<AiScreen> {
       ]);
 }
 
+/// Filter layanan berdasarkan nama, deskripsi, atau unit pengelola (case-insensitive).
+List<Service> filterServices(List<Service> services, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return services;
+  return services
+      .where((s) =>
+          s.name.toLowerCase().contains(q) ||
+          s.description.toLowerCase().contains(q) ||
+          s.owner.toLowerCase().contains(q))
+      .toList();
+}
+
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
 
@@ -934,15 +946,17 @@ class ServicesScreen extends StatefulWidget {
 }
 
 class _ServicesScreenState extends State<ServicesScreen> {
+  final api = ApiClient();
   final controller = TextEditingController();
+  List<Service> services = const [];
+  bool loading = true;
+  String? error;
 
-  static const services = [
-    ('SIMASTER', 'Sistem informasi akademik UGM', 'https://simaster.ugm.ac.id'),
-    ('ULT', 'Unit Layanan Terpadu', 'https://ult.ugm.ac.id/eservices/portal/'),
-    ('Dashboard UGM', 'UGM Dalam Angka', 'https://dashboard.ugm.ac.id/public/ugm_dalam_angka/view'),
-    ('E-Learning UGM', 'Pembelajaran daring UGM', 'https://elok.ugm.ac.id'),
-    ('PIONIR', 'PIONIR Gadjah Mada 2026', 'https://pionir.ugm.ac.id/'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
 
   @override
   void dispose() {
@@ -950,16 +964,24 @@ class _ServicesScreenState extends State<ServicesScreen> {
     super.dispose();
   }
 
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final result = await api.services();
+      if (mounted) setState(() => services = result);
+    } catch (e) {
+      if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final query = controller.text.trim().toLowerCase();
-    final filtered = query.isEmpty
-        ? services
-        : services
-              .where((item) =>
-                  item.$1.toLowerCase().contains(query) ||
-                  item.$2.toLowerCase().contains(query))
-              .toList();
+    if (loading) return const Center(child: CircularProgressIndicator());
+    if (error != null) return _ErrorView(message: error!, retry: load);
+
+    final filtered = filterServices(services, controller.text);
     return ListView(padding: const EdgeInsets.all(16), children: [
       const Text('Layanan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: navy)),
       const SizedBox(height: 6),
@@ -974,8 +996,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
           decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari layanan…'),
         ),
       ),
-      const SizedBox(height: 18),
-      const SectionTitle('Layanan Populer'),
+      const SizedBox(height: 8),
+      Text('${services.length} layanan tersedia', style: const TextStyle(fontSize: 12, color: textSecondary)),
       const SizedBox(height: 10),
       if (filtered.isEmpty)
         const Padding(
@@ -983,7 +1005,37 @@ class _ServicesScreenState extends State<ServicesScreen> {
           child: Center(child: Text('Tidak ada layanan yang cocok dengan pencarian.')),
         )
       else
-        ...filtered.map((item) => Padding(padding: const EdgeInsets.only(bottom: 9), child: Card(child: ListTile(onTap: () => DeviceBridge.openUrl(item.$3), leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Text(item.$1.characters.first, style: const TextStyle(color: ugmBlue, fontWeight: FontWeight.w900))), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(item.$2), trailing: const Icon(Icons.open_in_new, size: 18))))),
+        ...filtered.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Card(
+                child: ListTile(
+                  onTap: () => DeviceBridge.openUrl(item.url),
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFFEAF1FF),
+                    child: Text(item.name.characters.first, style: const TextStyle(color: ugmBlue, fontWeight: FontWeight.w900)),
+                  ),
+                  title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: textSecondary)),
+                        if (item.owner.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            const Icon(Icons.account_balance_outlined, size: 13, color: ugmBlue),
+                            const SizedBox(width: 4),
+                            Expanded(child: Text(item.owner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: ugmBlue))),
+                          ]),
+                        ],
+                      ],
+                    ),
+                  ),
+                  trailing: const Icon(Icons.open_in_new, size: 18),
+                ),
+              ),
+            )),
     ]);
   }
 }
