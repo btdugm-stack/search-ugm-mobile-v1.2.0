@@ -53,8 +53,17 @@ const radiusLg = 24.0;
 
 /// Analytics minimal (Sprint 6): event kunci dicatat ke konsol saat debug dan
 /// siap di-hook ke backend pihak ketiga (Firebase/PostHog) untuk release.
+///
+/// Integrasi backend (release blocker): set `Analytics.transport` sekali di
+/// `main()` sebelum `runApp`, mis.:
+///   Analytics.transport = (event, params) {
+///     FirebaseAnalytics.instance.logEvent(name: event, parameters: params);
+///   };
 class Analytics {
   Analytics._();
+
+  /// Transport backend opsional; dipanggil untuk setiap event setelah log debug.
+  static void Function(String event, Map<String, Object?> params)? transport;
 
   static const events = {
     'search', 'browse', 'open_result', 'load_more', 'ai_ask', 'ai_open_source',
@@ -64,7 +73,9 @@ class Analytics {
 
   static void fire(String event, [Map<String, Object?>? params]) {
     assert(events.contains(event), 'Event tidak terdaftar: $event');
-    if (kDebugMode) debugPrint('[analytics] $event ${params ?? const {}}');
+    final p = params ?? const <String, Object?>{};
+    if (kDebugMode) debugPrint('[analytics] $event $p');
+    transport?.call(event, p);
   }
 }
 
