@@ -88,6 +88,18 @@ void main() {
     expect(p2.x, closeTo(p.x * 2, 1));
   });
 
+  test('Analytics.fire menerima semua event terdaftar (Sprint 6)', () {
+    // 13 event: 12 per planner + load_more
+    expect(Analytics.events.length, greaterThanOrEqualTo(12));
+    for (final e in Analytics.events) {
+      Analytics.fire(e); // tidak melempar assert di debug
+    }
+    expect(
+      () => Analytics.fire('event_tidak_terdaftar'),
+      throwsA(isA<AssertionError>()),
+    );
+  });
+
   testWidgets('peta menerima gesture pinch-to-zoom tanpa error', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

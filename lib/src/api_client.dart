@@ -6,6 +6,13 @@ import 'models.dart';
 class ApiClient {
   static const _endpoint = 'https://search.ugm.ac.id/ai/search%26dsh/api/api.php';
 
+  // Cache in-memory (Sprint 6): hasil search TTL 5 menit; fasilitas & layanan
+  // dianggap immutable selama sesi (data master).
+  static const _searchCacheTtl = Duration(minutes: 5);
+  final Map<String, ({DateTime at, SearchResponse data})> _searchCache = {};
+  List<Facility>? _facilitiesCache;
+  List<Service>? _servicesCache;
+
   Future<Map<String, dynamic>> _get(Map<String, String> query) async {
     final uri = Uri.parse(_endpoint).replace(queryParameters: query);
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
@@ -57,6 +64,14 @@ class ApiClient {
     String year = '',
     int page = 1,
   }) async {
+    // Cache hanya untuk halaman pertama (pagination selalu fresh).
+    if (page == 1) {
+      final key = '${query.trim()}|$type|$dharma|$year';
+      final cached = _searchCache[key];
+      if (cached != null && DateTime.now().difference(cached.at) < _searchCacheTtl) {
+        return cached.data;
+      }
+    }
     final params = buildSearchParameters(
       query: query,
       type: type,
@@ -74,22 +89,30 @@ class ApiClient {
       final expectedType = type == 'tech4disaster' ? 'publication' : type;
       items = items.where((item) => item.type == expectedType).toList();
     }
-    return SearchResponse(items: items, total: (data['count'] as num?)?.toInt() ?? (data['total'] as num?)?.toInt() ?? items.length);
+    final response = SearchResponse(items: items, total: (data['count'] as num?)?.toInt() ?? (data['total'] as num?)?.toInt() ?? items.length);
+    if (page == 1) {
+      _searchCache['${query.trim()}|$type|$dharma|$year'] = (at: DateTime.now(), data: response);
+    }
+    return response;
   }
 
   Future<List<Facility>> facilities() async {
+    if (_facilitiesCache != null) return _facilitiesCache!;
     final json = await _get(const {'action': 'facility_locations'});
     final data = (json['data'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final raw = data['facilities'];
     if (raw is! List) return const [];
-    return raw
+    final result = raw
         .whereType<Map>()
         .map((item) => Facility.fromJson(item.cast<String, dynamic>()))
         .where((item) => item.latitude != 0 && item.longitude != 0)
         .toList();
+    _facilitiesCache = result;
+    return result;
   }
 
   Future<List<Service>> services() async {
+    if (_servicesCache != null) return _servicesCache!;
     final all = <Service>[];
     for (var page = 1; page <= 5; page++) {
       final json = await _get({
@@ -107,6 +130,7 @@ class ApiClient {
       all.addAll(items);
       if (items.length < 100) break;
     }
+    _servicesCache = all;
     return all;
   }
 

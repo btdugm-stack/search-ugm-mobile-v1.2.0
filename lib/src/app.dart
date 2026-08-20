@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show SocketException;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -49,6 +50,23 @@ const spaceXl = 24.0;
 const radiusSm = 12.0;
 const radiusMd = 16.0;
 const radiusLg = 24.0;
+
+/// Analytics minimal (Sprint 6): event kunci dicatat ke konsol saat debug dan
+/// siap di-hook ke backend pihak ketiga (Firebase/PostHog) untuk release.
+class Analytics {
+  Analytics._();
+
+  static const events = {
+    'search', 'browse', 'open_result', 'load_more', 'ai_ask', 'ai_open_source',
+    'map_open', 'map_cluster_tap', 'service_open', 'tool_open', 'filter_apply',
+    'share_answer', 'feedback_answer',
+  };
+
+  static void fire(String event, [Map<String, Object?>? params]) {
+    assert(events.contains(event), 'Event tidak terdaftar: $event');
+    if (kDebugMode) debugPrint('[analytics] $event ${params ?? const {}}');
+  }
+}
 
 class SearchUgmApp extends StatelessWidget {
   const SearchUgmApp({super.key});
@@ -646,6 +664,7 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
     final seq = ++_requestSeq;
+    Analytics.fire('search', {'q': controller.text.trim(), 'type': type});
     setState(() { loading = true; error = null; _page = 1; _hasMore = true; });
     try {
       if (controller.text.trim().isNotEmpty) {
@@ -674,6 +693,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> loadMore() async {
     if (_loadingMore || !_hasMore || loading) return;
+    Analytics.fire('load_more');
     setState(() => _loadingMore = true);
     try {
       final next = await widget.api.search(query: controller.text, type: type, dharma: dharma, year: year, page: _page + 1);
@@ -719,7 +739,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Row(children: [
             Expanded(child: OutlinedButton(onPressed: () => setModal(() { draftDharma = ''; draftYear = ''; }), child: const Text('Reset'))),
             const SizedBox(width: 10),
-            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Terapkan'))),
+            Expanded(child: FilledButton(onPressed: () { Analytics.fire('filter_apply', {'dharma': draftDharma, 'year': draftYear}); Navigator.pop(context, true); }, child: const Text('Terapkan'))),
           ]),
         ]),
       )),
@@ -790,6 +810,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     selected: type == entry.key,
                     onSelected: (_) {
                       setState(() => type = entry.key);
+                      Analytics.fire('browse', {'type': entry.key});
                       if (controller.text.isNotEmpty || type != 'all') search();
                     },
                   );
@@ -976,7 +997,10 @@ class ResultCard extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 8),
         child: Card(child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => DeviceBridge.openUrl(item.url),
+          onTap: () {
+            Analytics.fire('open_result', {'type': item.type});
+            DeviceBridge.openUrl(item.url);
+          },
           child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Chip(label: Text(item.type.toUpperCase(), style: const TextStyle(fontSize: 10)), visualDensity: VisualDensity.compact, side: BorderSide.none, backgroundColor: const Color(0xFFEAF1FF)),
@@ -1057,6 +1081,7 @@ class _AiScreenState extends State<AiScreen> {
   Future<void> send() async {
     final question = controller.text.trim();
     if (question.isEmpty || loading) return;
+    Analytics.fire('ai_ask', {'mode': smartMode ? 'smart' : 'search', 'q': question});
     controller.clear();
     setState(() => _canSend = false);
     FocusManager.instance.primaryFocus?.unfocus();
@@ -1105,10 +1130,12 @@ class _AiScreenState extends State<AiScreen> {
   }
 
   Future<void> _shareAnswer(String text) async {
+    Analytics.fire('share_answer');
     await SharePlus.instance.share(ShareParams(text: text));
   }
 
   void _feedback({required bool helpful}) {
+    Analytics.fire('feedback_answer', {'helpful': helpful});
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(helpful ? 'Terima kasih atas masukannya.' : 'Terima kasih, masukan Anda kami catat untuk perbaikan.'),
     ));
@@ -1198,7 +1225,10 @@ class _AiScreenState extends State<AiScreen> {
                               borderRadius: BorderRadius.circular(12),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
-                                onTap: () => DeviceBridge.openUrl(source.url),
+                                onTap: () {
+                                  Analytics.fire('ai_open_source');
+                                  DeviceBridge.openUrl(source.url);
+                                },
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   child: Row(children: [
@@ -1361,6 +1391,59 @@ class _ServicesScreenState extends State<ServicesScreen> {
     }
   }
 
+  /// Card layanan (dipakai SliverList.builder — rendering lazy, Sprint 6).
+  Widget _serviceCard(Service item) {
+    return Card(
+      child: ListTile(
+        onTap: () {
+          Analytics.fire('service_open', {'name': item.name});
+          DeviceBridge.openUrl(item.url);
+        },
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFFEAF1FF),
+          child: Text(item.name.characters.first, style: const TextStyle(color: ugmBlue, fontWeight: FontWeight.w900)),
+        ),
+        title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: textSecondary)),
+              if (item.owner.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(children: [
+                  const Icon(Icons.account_balance_outlined, size: 13, color: ugmBlue),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(item.owner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: ugmBlue))),
+                ]),
+              ],
+              const SizedBox(height: 5),
+              Row(children: [
+                Icon(item.isExternal ? Icons.public : Icons.lock_outline, size: 12, color: textSecondary),
+                const SizedBox(width: 4),
+                Text(item.isExternal ? 'Situs eksternal' : 'Layanan UGM', style: const TextStyle(fontSize: 11, color: textSecondary)),
+              ]),
+            ],
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (item.guideUrl.isNotEmpty)
+              IconButton(
+                tooltip: 'Panduan penggunaan',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => DeviceBridge.openUrl(item.guideUrl),
+                icon: const Icon(Icons.help_outline, size: 19),
+              ),
+            const Icon(Icons.open_in_new, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator());
@@ -1369,103 +1452,75 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final filtered = filterServices(services, controller.text)
         .where((s) => audienceFilter.isEmpty || s.audience == audienceFilter)
         .toList();
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('Layanan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: navy)),
-      const SizedBox(height: 6),
-      const Text('Direktori layanan digital UGM', style: TextStyle(color: textSecondary)),
-      const SizedBox(height: 18),
-      Semantics(
-        textField: true,
-        label: 'Cari layanan',
-        child: TextField(
-          controller: controller,
-          onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari layanan…'),
-        ),
-      ),
-      const SizedBox(height: 8),
-      Text('${services.length} layanan tersedia', style: const TextStyle(fontSize: 12, color: textSecondary)),
-      const SizedBox(height: 10),
-      if (audiences.isNotEmpty) ...[
-        SizedBox(
-          height: 38,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              ChoiceChip(
-                label: const Text('Semua'),
-                selected: audienceFilter.isEmpty,
-                onSelected: (_) => setState(() => audienceFilter = ''),
-              ),
-              ...audiences.take(6).map((a) => Padding(
-                    padding: const EdgeInsets.only(left: 7),
-                    child: ChoiceChip(
-                      label: Text(a, style: const TextStyle(fontSize: 12)),
-                      selected: audienceFilter == a,
-                      onSelected: (_) => setState(() => audienceFilter = a),
-                    ),
-                  )),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-      ],
-      if (filtered.isEmpty)
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: Center(child: Text('Tidak ada layanan yang cocok dengan pencarian.')),
-        )
-      else
-        ...filtered.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 9),
-              child: Card(
-                child: ListTile(
-                  onTap: () => DeviceBridge.openUrl(item.url),
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFEAF1FF),
-                    child: Text(item.name.characters.first, style: const TextStyle(color: ugmBlue, fontWeight: FontWeight.w900)),
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Layanan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: navy)),
+                const SizedBox(height: 6),
+                const Text('Direktori layanan digital UGM', style: TextStyle(color: textSecondary)),
+                const SizedBox(height: 18),
+                Semantics(
+                  textField: true,
+                  label: 'Cari layanan',
+                  child: TextField(
+                    controller: controller,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari layanan…'),
                   ),
-                  title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                const SizedBox(height: 8),
+                Text('${services.length} layanan tersedia', style: const TextStyle(fontSize: 12, color: textSecondary)),
+                const SizedBox(height: 10),
+                if (audiences.isNotEmpty) ...[
+                  SizedBox(
+                    height: 38,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
                       children: [
-                        Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: textSecondary)),
-                        if (item.owner.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Row(children: [
-                            const Icon(Icons.account_balance_outlined, size: 13, color: ugmBlue),
-                            const SizedBox(width: 4),
-                            Expanded(child: Text(item.owner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: ugmBlue))),
-                          ]),
-                        ],
-                        const SizedBox(height: 5),
-                        Row(children: [
-                          Icon(item.isExternal ? Icons.public : Icons.lock_outline, size: 12, color: textSecondary),
-                          const SizedBox(width: 4),
-                          Text(item.isExternal ? 'Situs eksternal' : 'Layanan UGM', style: const TextStyle(fontSize: 11, color: textSecondary)),
-                        ]),
+                        ChoiceChip(
+                          label: const Text('Semua'),
+                          selected: audienceFilter.isEmpty,
+                          onSelected: (_) => setState(() => audienceFilter = ''),
+                        ),
+                        ...audiences.take(6).map((a) => Padding(
+                              padding: const EdgeInsets.only(left: 7),
+                              child: ChoiceChip(
+                                label: Text(a, style: const TextStyle(fontSize: 12)),
+                                selected: audienceFilter == a,
+                                onSelected: (_) => setState(() => audienceFilter = a),
+                              ),
+                            )),
                       ],
                     ),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (item.guideUrl.isNotEmpty)
-                        IconButton(
-                          tooltip: 'Panduan penggunaan',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => DeviceBridge.openUrl(item.guideUrl),
-                          icon: const Icon(Icons.help_outline, size: 19),
-                        ),
-                      const Icon(Icons.open_in_new, size: 18),
-                    ],
-                  ),
-                ),
-              ),
-            )),
-    ]);
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        ),
+        if (filtered.isEmpty)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: Text('Tidak ada layanan yang cocok dengan pencarian.')),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            sliver: SliverList.builder(
+              itemCount: filtered.length,
+              itemBuilder: (_, i) => Padding(padding: const EdgeInsets.only(bottom: 9), child: _serviceCard(filtered[i])),
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -1508,7 +1563,30 @@ class ToolsAiScreen extends StatelessWidget {
         body: ListView(padding: const EdgeInsets.all(16), children: [
           Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(gradient: const LinearGradient(colors: [navy, ugmBlue]), borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.auto_fix_high, color: Colors.white, size: 34), SizedBox(height: 12), Text('AI Tools UGM', style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900)), SizedBox(height: 5), Text('Akses kumpulan alat AI pada versi web Search UGM.', style: TextStyle(color: Colors.white70))])),
           const SizedBox(height: 16),
-          ...tools.map((tool) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Card(child: ListTile(contentPadding: const EdgeInsets.all(12), leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Icon(tool.$3, color: ugmBlue)), title: Text(tool.$1, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(tool.$2)), trailing: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.open_in_new, size: 18), const SizedBox(height: 2), const Text('Buka situs UGM', style: TextStyle(fontSize: 9, color: textSecondary))]), onTap: () => DeviceBridge.openUrl(tool.$4))))),
+          ...tools.map((tool) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(12),
+                    leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Icon(tool.$3, color: ugmBlue)),
+                    title: Text(tool.$1, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(tool.$2)),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.open_in_new, size: 18),
+                        const SizedBox(height: 2),
+                        const Text('Buka situs UGM', style: TextStyle(fontSize: 9, color: textSecondary)),
+                      ],
+                    ),
+                    onTap: () {
+                      Analytics.fire('tool_open', {'name': tool.$1});
+                      DeviceBridge.openUrl(tool.$4);
+                    },
+                  ),
+                ),
+              )),
           const Padding(padding: EdgeInsets.only(top: 5), child: Text('Beberapa Tools AI dibuka pada situs resmi UGM dan dapat meminta autentikasi sesuai kebijakan layanannya.', style: TextStyle(fontSize: 12, color: textSecondary))),
         ]),
       );
@@ -1543,6 +1621,7 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
   @override
   void initState() {
     super.initState();
+    Analytics.fire('map_open');
     load();
     Future<void>.delayed(const Duration(seconds: 4), () {
       if (mounted) setState(() => showGestureHint = false);
@@ -2212,6 +2291,7 @@ class _UgmTileMapState extends State<UgmTileMap> {
             button: true,
             child: GestureDetector(
               onTap: () => setState(() {
+                Analytics.fire('map_cluster_tap');
                 latitude = lat;
                 longitude = lon;
                 zoom = math.min(zoom + 2, 19);
