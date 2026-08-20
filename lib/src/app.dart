@@ -300,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
     (label: 'Layanan', type: 'service', icon: Icons.apps),
     (label: 'Berita', type: 'news', icon: Icons.newspaper_outlined),
     (label: 'Produk', type: 'product', icon: Icons.shopping_bag_outlined),
-    (label: 'Dosen / Staff', type: 'people', icon: Icons.people_outline),
+    (label: 'Dosen / Tendik', type: 'people', icon: Icons.people_outline),
     (label: 'Publikasi', type: 'publication', icon: Icons.article_outlined),
     (label: 'HKI / Paten', type: 'patent', icon: Icons.workspace_premium_outlined),
     (label: 'Tech4disaster', type: 'tech4disaster', icon: Icons.emergency_outlined),
@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Contoh pertanyaan untuk card DSH Menjawab (Sprint 3.1).
   static const aiStarterPrompts = [
-    'Apa tugas mahasiswa KKN?',
+    'Apa saja mahasiswa KKN?',
     'Bagaimana cara daftar SIMASTER?',
     'Kapan pendaftaran beasiswa dibuka?',
   ];
@@ -439,7 +439,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(children: [
-                        ClipOval(child: Image.asset('assets/icon/app_icon.png', width: 40, height: 40, fit: BoxFit.cover)),
+                        CircleAvatar(
+                          radius: 26,
+                          backgroundColor: Colors.white,
+                          child: ClipOval(child: Image.asset('assets/icon/app_icon.png', width: 44, height: 44, fit: BoxFit.cover)),
+                        ),
                         const SizedBox(width: 12),
                         const Expanded(child: Text('SEARCH UGM', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
                       ]),

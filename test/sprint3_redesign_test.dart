@@ -38,8 +38,9 @@ void main() {
     await scrollHome(tester, -600);
     await scrollHome(tester, -600);
     await scrollHome(tester, -600);
+    await scrollHome(tester, -200);
     expect(find.text('DSH Menjawab — Smart'), findsOneWidget);
-    expect(find.text('Apa tugas mahasiswa KKN?'), findsOneWidget);
+    expect(find.text('Apa saja mahasiswa KKN?'), findsOneWidget);
     expect(find.text('Bagaimana cara daftar SIMASTER?'), findsOneWidget);
 
     await scrollHome(tester, -600);
