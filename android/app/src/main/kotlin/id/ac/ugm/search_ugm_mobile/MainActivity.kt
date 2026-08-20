@@ -53,6 +53,19 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
 
+                    "getFavorites" -> {
+                        val prefs = getSharedPreferences("search_ugm_favorites", MODE_PRIVATE)
+                        val stored = prefs.getString("items", null)
+                        result.success(stored?.split("\u0001")?.filter { it.isNotEmpty() } ?: emptyList<String>())
+                    }
+
+                    "saveFavorites" -> {
+                        val items = call.argument<List<String>>("items") ?: emptyList()
+                        val prefs = getSharedPreferences("search_ugm_favorites", MODE_PRIVATE)
+                        prefs.edit().putString("items", items.joinToString("\u0001")).apply()
+                        result.success(null)
+                    }
+
                     else -> result.notImplemented()
                 }
             }

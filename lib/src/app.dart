@@ -193,7 +193,14 @@ class _MainShellState extends State<MainShell> {
       const ServicesScreen(),
     ];
     return Scaffold(
-      body: SafeArea(child: IndexedStack(index: index, children: pages)),
+      body: SafeArea(
+        child: IndexedStack(index: index, children: [
+          // Lazy tab (Sprint 6.5): tab dibangun saat pertama kali dibuka,
+          // mengurangi beban frame pertama/cold start; state tetap dipertahankan.
+          for (var i = 0; i < pages.length; i++)
+            _LazyTab(active: i == index, builder: (_) => pages[i]),
+        ]),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (value) => setState(() => index = value),
@@ -220,6 +227,32 @@ class SectionTitle extends StatelessWidget {
           ?trailing,
         ],
       );
+}
+
+/// Membangun tab hanya saat pertama kali aktif (Sprint 6.5) — mengurangi beban
+/// frame pertama / cold start. State tab dipertahankan IndexedStack setelah
+/// dibangun (widget instance disimpan di [_LazyTabState._built]).
+class _LazyTab extends StatefulWidget {
+  const _LazyTab({required this.active, required this.builder});
+
+  final bool active;
+  final WidgetBuilder builder;
+
+  @override
+  State<_LazyTab> createState() => _LazyTabState();
+}
+
+class _LazyTabState extends State<_LazyTab> {
+  Widget? _built;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.active) {
+      _built ??= widget.builder(context);
+      return _built!;
+    }
+    return _built ?? const SizedBox.shrink();
+  }
 }
 
 class HomeScreen extends StatefulWidget {
@@ -609,6 +642,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _removeHistoryItem(String item) async {
+    HapticFeedback.lightImpact();
     final next = history.where((h) => h != item).toList();
     await DeviceBridge.saveHistory(next);
     await _loadHistory();
@@ -1093,6 +1127,7 @@ class _AiScreenState extends State<AiScreen> {
     final question = controller.text.trim();
     if (question.isEmpty || loading) return;
     Analytics.fire('ai_ask', {'mode': smartMode ? 'smart' : 'search', 'q': question});
+    HapticFeedback.mediumImpact();
     controller.clear();
     setState(() => _canSend = false);
     FocusManager.instance.primaryFocus?.unfocus();
@@ -1374,6 +1409,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
   bool loading = true;
   String? error;
   String audienceFilter = '';
+  bool onlyFavorites = false;
+  Set<String> favorites = {};
 
   List<String> get audiences =>
       services.map((e) => e.audience).where((e) => e.isNotEmpty).toSet().toList()..sort();
@@ -1382,6 +1419,20 @@ class _ServicesScreenState extends State<ServicesScreen> {
   void initState() {
     super.initState();
     load();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final result = await DeviceBridge.getFavorites();
+    if (mounted) setState(() => favorites = result.toSet());
+  }
+
+  Future<void> _toggleFavorite(Service item) async {
+    HapticFeedback.selectionClick();
+    final next = {...favorites};
+    if (!next.remove(item.name)) next.add(item.name);
+    setState(() => favorites = next);
+    await DeviceBridge.saveFavorites(next.toList());
   }
 
   @override
@@ -1441,6 +1492,16 @@ class _ServicesScreenState extends State<ServicesScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            IconButton(
+              tooltip: favorites.contains(item.name) ? 'Hapus dari favorit' : 'Tandai favorit',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _toggleFavorite(item),
+              icon: Icon(
+                favorites.contains(item.name) ? Icons.star : Icons.star_border,
+                size: 20,
+                color: favorites.contains(item.name) ? goni : textSecondary,
+              ),
+            ),
             if (item.guideUrl.isNotEmpty)
               IconButton(
                 tooltip: 'Panduan penggunaan',
@@ -1462,6 +1523,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
     final filtered = filterServices(services, controller.text)
         .where((s) => audienceFilter.isEmpty || s.audience == audienceFilter)
+        .where((s) => !onlyFavorites || favorites.contains(s.name))
         .toList();
     return CustomScrollView(
       slivers: [
@@ -1495,15 +1557,27 @@ class _ServicesScreenState extends State<ServicesScreen> {
                       children: [
                         ChoiceChip(
                           label: const Text('Semua'),
-                          selected: audienceFilter.isEmpty,
-                          onSelected: (_) => setState(() => audienceFilter = ''),
+                          selected: audienceFilter.isEmpty && !onlyFavorites,
+                          onSelected: (_) => setState(() {
+                            audienceFilter = '';
+                            onlyFavorites = false;
+                          }),
                         ),
-                        ...audiences.take(6).map((a) => Padding(
+                        ChoiceChip(
+                          avatar: Icon(Icons.star, size: 16, color: onlyFavorites ? Colors.white : goni),
+                          label: const Text('Favorit'),
+                          selected: onlyFavorites,
+                          onSelected: (_) => setState(() => onlyFavorites = !onlyFavorites),
+                        ),
+                        ...audiences.take(5).map((a) => Padding(
                               padding: const EdgeInsets.only(left: 7),
                               child: ChoiceChip(
                                 label: Text(a, style: const TextStyle(fontSize: 12)),
-                                selected: audienceFilter == a,
-                                onSelected: (_) => setState(() => audienceFilter = a),
+                                selected: audienceFilter == a && !onlyFavorites,
+                                onSelected: (_) => setState(() {
+                                  audienceFilter = a;
+                                  onlyFavorites = false;
+                                }),
                               ),
                             )),
                       ],

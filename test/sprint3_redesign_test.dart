@@ -70,9 +70,14 @@ void main() {
   testWidgets('Cari: empty state menampilkan histori + suggestion (Sprint 3.2)', (tester) async {
     await tester.pumpWidget(const SearchUgmApp());
 
+    // Lazy tab (Sprint 6.5): buka tab Cari dulu
+    await tester.tap(find.text('Cari'));
+    await tester.pump();
+
     expect(find.text('Coba cari', skipOffstage: false), findsOneWidget);
     expect(find.text('Beasiswa', skipOffstage: false), findsOneWidget);
-    // SIMASTER ada di suggestion Cari DAN di list Layanan (2 widget)
+    // SIMASTER ada di suggestion Cari DAN di list Layanan (2 widget saat
+    // keduanya built; tab Layanan lazy → cek minimal 1)
     expect(find.text('SIMASTER', skipOffstage: false), findsWidgets);
     expect(find.text('Kalender akademik', skipOffstage: false), findsOneWidget);
 

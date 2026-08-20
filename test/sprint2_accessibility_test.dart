@@ -21,8 +21,15 @@ void main() {
   testWidgets('field dan tombol utama punya label aksesibilitas (Sprint 2)', (tester) async {
     await tester.pumpWidget(const SearchUgmApp());
 
-    // Field pencarian Beranda & Cari sama-sama berlabel 'Cari apa saja di UGM'
-    expect(bySemanticsWidget('Cari apa saja di UGM'), findsNWidgets(2));
+    // Lazy tab (Sprint 6.5): tab dibangun saat pertama dibuka — buka Cari & AI.
+    // IndexedStack tidak memakai Offstage → finder melihat semua tab yang sudah
+    // dibangun: Beranda 1 field, setelah tab Cari dibangun jadi 2 field.
+    expect(bySemanticsWidget('Cari apa saja di UGM'), findsOneWidget); // hanya Beranda
+    await tester.tap(find.text('Cari'));
+    await tester.pump();
+    expect(bySemanticsWidget('Cari apa saja di UGM'), findsNWidgets(2)); // Beranda + Cari
+    await tester.tap(find.text('AI'));
+    await tester.pump();
     expect(bySemanticsWidget('Tanya lebih lanjut'), findsOneWidget);
     // Field 'Cari layanan' hanya tampil saat data layanan sukses dimuat
     // (di widget test HTTP ditolak → error state); diverifikasi live di emulator.
