@@ -709,23 +709,23 @@ class ResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Card(child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => DeviceBridge.openUrl(item.url),
-          child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Chip(label: Text(item.type.toUpperCase(), style: const TextStyle(fontSize: 10)), visualDensity: VisualDensity.compact, side: BorderSide.none, backgroundColor: const Color(0xFFEAF1FF)),
               if (item.dharma.isNotEmpty) ...[const SizedBox(width: 7), Expanded(child: Text(item.dharma, style: const TextStyle(fontSize: 11, color: ugmBlue)))],
             ]),
-            const SizedBox(height: 5),
+            const SizedBox(height: 4),
             Text.rich(
               _highlight(item.title, const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, height: 1.3)),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            if (item.description.isNotEmpty) ...[const SizedBox(height: 5), Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textSecondary, height: 1.35, fontSize: 13))],
-            const SizedBox(height: 8),
+            if (item.description.isNotEmpty) ...[const SizedBox(height: 4), Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textSecondary, height: 1.35, fontSize: 13))],
+            const SizedBox(height: 7),
             Row(children: [const Icon(Icons.verified_outlined, size: 15, color: ugmBlue), const SizedBox(width: 5), Expanded(child: Text(item.source, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: ugmBlue))), const Icon(Icons.open_in_new, size: 16)]),
           ])),
         )),
