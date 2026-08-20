@@ -419,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // tetap menempel di atas saat halaman di-scroll (Sprint 3.1).
         SliverAppBar(
           pinned: true,
-          expandedHeight: 168,
+          expandedHeight: 180,
           backgroundColor: ugmBlue,
           foregroundColor: Colors.white,
           scrolledUnderElevation: 0,
@@ -434,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 44, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 44, 20, 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -442,10 +442,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.school, color: ugmBlue)),
                         SizedBox(width: 12),
                         Expanded(child: Text('SEARCH UGM', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
-                        Chip(label: Text('DSH'), side: BorderSide.none),
                       ]),
                       const Spacer(),
-                      const Text('Ada yang bisa kami bantu hari ini?', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                      const Text(
+                        'Ada yang bisa kami bantu hari ini?',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700),
+                      ),
                     ],
                   ),
                 ),
