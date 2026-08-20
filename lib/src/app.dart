@@ -448,12 +448,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         const Expanded(child: Text('SEARCH UGM', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
                       ]),
                       const Spacer(),
-                      const Text(
-                        'Ada yang bisa kami bantu hari ini?',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700),
-                      ),
                     ],
                   ),
                 ),
@@ -537,7 +531,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Row(children: [
                       CircleAvatar(backgroundColor: ugmBlue, child: Icon(Icons.auto_awesome, color: Colors.white)),
                       SizedBox(width: 10),
-                      Expanded(child: Text('DSH Menjawab — Smart', style: TextStyle(fontWeight: FontWeight.w800))),
+                      Expanded(child: Text('Search UGM Menjawab', style: TextStyle(fontWeight: FontWeight.w800))),
                     ]),
                     const SizedBox(height: 4),
                     const Text('Jawaban ringkas dari sumber UGM terpercaya.', style: TextStyle(fontSize: 13, color: textSecondary)),
@@ -553,12 +547,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            const SectionTitle('Rekomendasi untuk Anda'),
-            const SizedBox(height: 10),
-            Card(child: ListTile(onTap: () => widget.onSearch('beasiswa S2'), leading: const Icon(Icons.school_outlined, color: ugmBlue), title: const Text('Beasiswa S2 Dalam Negeri'), subtitle: const Text('Temukan informasi dan tenggat terbaru'), trailing: const Icon(Icons.arrow_forward_ios, size: 16))),
-            Card(child: ListTile(onTap: () => widget.onSearch('KKN'), leading: const Icon(Icons.groups_outlined, color: ugmBlue), title: const Text('Program KKN UGM'), subtitle: const Text('Informasi pendaftaran dan laporan KKN'), trailing: const Icon(Icons.arrow_forward_ios, size: 16))),
-            Card(child: ListTile(onTap: () => widget.onSearch('e-learning'), leading: const Icon(Icons.school_outlined, color: ugmBlue), title: const Text('E-Learning UGM'), subtitle: const Text('Akses pembelajaran daring UGM'), trailing: const Icon(Icons.arrow_forward_ios, size: 16))),
             const SizedBox(height: 30),
           ]),
         ),
@@ -1204,7 +1192,7 @@ class _AiScreenState extends State<AiScreen> {
             Row(children: [
               const Icon(Icons.auto_awesome, color: ugmBlue),
               const SizedBox(width: 10),
-              const Expanded(child: Text('DSH Menjawab', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
+              const Expanded(child: Text('Search UGM', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
               SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(value: true, label: Text('Smart'), icon: Icon(Icons.auto_awesome, size: 15)),

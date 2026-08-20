@@ -33,19 +33,14 @@ void main() {
     expect(find.text('Video'), findsOneWidget);
     expect(find.text('Fasilitas Kampus'), findsOneWidget);
 
-    // Tutup sheet, lalu scroll ke bawah
+    // Tutup sheet, lalu scroll ke bawah sampai card DSH terlihat (deterministik)
     await closeSheet(tester);
-    await scrollHome(tester, -600);
-    await scrollHome(tester, -600);
-    await scrollHome(tester, -600);
-    await scrollHome(tester, -200);
-    expect(find.text('DSH Menjawab — Smart'), findsOneWidget);
+    for (var i = 0; i < 8 && !tester.any(find.text('Search UGM Menjawab')); i++) {
+      await scrollHome(tester, -400);
+    }
+    expect(find.text('Search UGM Menjawab'), findsOneWidget);
     expect(find.text('Apa saja mahasiswa KKN?'), findsOneWidget);
     expect(find.text('Bagaimana cara daftar SIMASTER?'), findsOneWidget);
-
-    await scrollHome(tester, -600);
-    expect(find.text('Rekomendasi untuk Anda'), findsOneWidget);
-    expect(find.text('Populer Minggu Ini'), findsNothing);
 
     expect(tester.takeException(), isNull);
   });
