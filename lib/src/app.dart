@@ -158,6 +158,14 @@ class _MainShellState extends State<MainShell> {
   int index = 0;
   String initialQuery = '';
   String initialType = 'all';
+
+  /// Background desain per tab (urutan: Beranda, Cari, AI, Layanan).
+  static const List<String> _bgAssets = [
+    'assets/background/bg-beranda.png',
+    'assets/background/bg-cari.png',
+    'assets/background/bg-ai.png',
+    'assets/background/bg-layanan.png',
+  ];
   String initialAiPrompt = '';
 
   void openSearch({String query = '', String type = 'all'}) {
@@ -197,8 +205,20 @@ class _MainShellState extends State<MainShell> {
         child: IndexedStack(index: index, children: [
           // Lazy tab (Sprint 6.5): tab dibangun saat pertama kali dibuka,
           // mengurangi beban frame pertama/cold start; state tetap dipertahankan.
+          // Background desain per tab (assets/background).
           for (var i = 0; i < pages.length; i++)
-            _LazyTab(active: i == index, builder: (_) => pages[i]),
+            _LazyTab(
+              active: i == index,
+              builder: (_) => Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(_bgAssets[i]),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: pages[i],
+              ),
+            ),
         ]),
       ),
       bottomNavigationBar: NavigationBar(
