@@ -1241,6 +1241,84 @@ class _UgmTileMapState extends State<UgmTileMap> {
     setState(() => zoom = (zoom + delta).clamp(11.0, 19.0).toDouble());
   }
 
+  /// Grid-based marker clustering: marker yang jatuh di sel grid yang sama
+  /// (72 px layar) dirender sebagai satu cluster berisi jumlah, sehingga
+  /// peta awal tidak menampilkan ratusan pin individu (UX-04).
+  static const _clusterGrid = 72.0;
+
+  List<Widget> _buildMarkers(BoxConstraints size, math.Point<double> center) {
+    final cells = <String, List<({Facility item, math.Point<double> pos})>>{};
+    for (final item in widget.facilities) {
+      final point = world(item.latitude, item.longitude);
+      final left = point.x - center.x + size.maxWidth / 2;
+      final top = point.y - center.y + size.maxHeight / 2;
+      if (left < -40 || top < -40 || left > size.maxWidth + 40 || top > size.maxHeight + 40) continue;
+      final key = '${(left / _clusterGrid).floor()}:${(top / _clusterGrid).floor()}';
+      cells.putIfAbsent(key, () => []).add((item: item, pos: math.Point(left, top)));
+    }
+    final widgets = <Widget>[];
+    for (final group in cells.values) {
+      if (group.length == 1) {
+        final item = group.first.item;
+        final p = group.first.pos;
+        widgets.add(Positioned(
+          left: p.x - 19,
+          top: p.y - 38,
+          child: Semantics(
+            label: item.name,
+            button: true,
+            child: GestureDetector(
+              onTap: () => widget.onSelect(item),
+              child: Icon(
+                Icons.location_pin,
+                color: widget.selected?.id == item.id ? Colors.orange : ugmBlue,
+                size: widget.selected?.id == item.id ? 46 : 38,
+              ),
+            ),
+          ),
+        ));
+      } else {
+        final avgX = group.map((e) => e.pos.x).reduce((a, b) => a + b) / group.length;
+        final avgY = group.map((e) => e.pos.y).reduce((a, b) => a + b) / group.length;
+        final lat = group.map((e) => e.item.latitude).reduce((a, b) => a + b) / group.length;
+        final lon = group.map((e) => e.item.longitude).reduce((a, b) => a + b) / group.length;
+        widgets.add(Positioned(
+          left: avgX - 24,
+          top: avgY - 24,
+          child: Semantics(
+            label: '${group.length} fasilitas di area ini',
+            button: true,
+            child: GestureDetector(
+              onTap: () => setState(() {
+                latitude = lat;
+                longitude = lon;
+                zoom = math.min(zoom + 2, 19);
+              }),
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: ugmBlue,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${group.length}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, size) {
     viewportSize = Size(size.maxWidth, size.maxHeight);
@@ -1276,14 +1354,7 @@ class _UgmTileMapState extends State<UgmTileMap> {
                   )
                 : const SizedBox.shrink(),
           ),
-        for (final item in widget.facilities)
-          Builder(builder: (_) {
-            final point = world(item.latitude, item.longitude);
-            final left = point.x - center.x + size.maxWidth / 2;
-            final top = point.y - center.y + size.maxHeight / 2;
-            if (left < -40 || top < -40 || left > size.maxWidth + 40 || top > size.maxHeight + 40) return const SizedBox.shrink();
-            return Positioned(left: left - 19, top: top - 38, child: Semantics(label: item.name, button: true, child: GestureDetector(onTap: () => widget.onSelect(item), child: Icon(Icons.location_pin, color: widget.selected?.id == item.id ? Colors.orange : ugmBlue, size: widget.selected?.id == item.id ? 46 : 38))));
-          }),
+        ..._buildMarkers(size, center),
         Positioned(right: 12, bottom: 150, child: Column(children: [
           FloatingActionButton.small(heroTag: 'zoomIn', tooltip: 'Perbesar', onPressed: zoom < 19 ? () => changeZoom(1) : null, child: const Icon(Icons.add)),
           const SizedBox(height: 7),
