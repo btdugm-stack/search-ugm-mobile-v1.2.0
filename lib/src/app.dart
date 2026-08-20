@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'api_client.dart';
 import 'device_bridge.dart';
@@ -882,9 +883,12 @@ class AiScreen extends StatefulWidget {
 class _AiScreenState extends State<AiScreen> {
   late final TextEditingController controller;
   final sessionId = 'mobile-${DateTime.now().millisecondsSinceEpoch}';
-  final messages = <({bool user, String text, List<SearchItem> sources})>[];
+  final messages = <({bool user, String text, List<SearchItem> sources, String sourceLabel})>[];
   bool loading = false;
   bool _canSend = false;
+  bool smartMode = true;
+  String _status = '';
+  Timer? _statusTimer;
 
   static const starterPrompts = [
     'Apa tugas mahasiswa KKN?',
@@ -907,6 +911,7 @@ class _AiScreenState extends State<AiScreen> {
 
   @override
   void dispose() {
+    _statusTimer?.cancel();
     controller.dispose();
     super.dispose();
   }
@@ -917,14 +922,35 @@ class _AiScreenState extends State<AiScreen> {
     controller.clear();
     setState(() => _canSend = false);
     FocusManager.instance.primaryFocus?.unfocus();
-    setState(() { messages.add((user: true, text: question, sources: const [])); loading = true; });
+    setState(() {
+      messages.add((user: true, text: question, sources: const [], sourceLabel: ''));
+      loading = true;
+      _status = smartMode ? 'Mencari sumber resmi UGM…' : 'Mencari hasil di UGM…';
+    });
+    _statusTimer?.cancel();
+    _statusTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted && loading) {
+        setState(() => _status = smartMode ? 'Menyusun jawaban…' : 'Merangkum hasil…');
+      }
+    });
     try {
-      final answer = await widget.api.askSmart(question, sessionId);
-      if (mounted) setState(() => messages.add((user: false, text: answer.answer, sources: answer.sources)));
+      if (smartMode) {
+        final answer = await widget.api.askSmart(question, sessionId);
+        if (mounted) setState(() => messages.add((user: false, text: answer.answer, sources: answer.sources, sourceLabel: 'Sumber')));
+      } else {
+        final result = await widget.api.search(query: question, type: 'all');
+        if (mounted) {
+          final summary = result.items.isEmpty
+              ? 'Tidak ada hasil untuk "$question". Coba kata kunci lain.'
+              : 'Menampilkan ${result.items.length} hasil teratas untuk "$question":';
+          setState(() => messages.add((user: false, text: summary, sources: result.items.take(4).toList(), sourceLabel: 'Hasil')));
+        }
+      }
     } catch (e) {
-      if (mounted) setState(() => messages.add((user: false, text: 'Maaf, DSH belum dapat menjawab. $e', sources: const [])));
+      if (mounted) setState(() => messages.add((user: false, text: 'Maaf, DSH belum dapat menjawab. $e', sources: const [], sourceLabel: '')));
     } finally {
-      if (mounted) setState(() => loading = false);
+      _statusTimer?.cancel();
+      if (mounted) setState(() { loading = false; _status = ''; });
     }
   }
 
@@ -940,16 +966,48 @@ class _AiScreenState extends State<AiScreen> {
     }
   }
 
-  void _feedback() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Terima kasih atas masukannya.')));
+  Future<void> _shareAnswer(String text) async {
+    await SharePlus.instance.share(ShareParams(text: text));
+  }
+
+  void _feedback({required bool helpful}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(helpful ? 'Terima kasih atas masukannya.' : 'Terima kasih, masukan Anda kami catat untuk perbaikan.'),
+    ));
   }
 
   @override
   Widget build(BuildContext context) => Column(children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
           color: Colors.white,
-          child: const Row(children: [Icon(Icons.auto_awesome, color: ugmBlue), SizedBox(width: 10), Expanded(child: Text('DSH Menjawab', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))), Chip(label: Text('SMART'), side: BorderSide.none, backgroundColor: Color(0xFFEAF1FF))]),
+          child: Column(children: [
+            Row(children: [
+              const Icon(Icons.auto_awesome, color: ugmBlue),
+              const SizedBox(width: 10),
+              const Expanded(child: Text('DSH Menjawab', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Smart'), icon: Icon(Icons.auto_awesome, size: 15)),
+                  ButtonSegment(value: false, label: Text('Search'), icon: Icon(Icons.search, size: 15)),
+                ],
+                selected: {smartMode},
+                onSelectionChanged: (selection) => setState(() => smartMode = selection.first),
+                showSelectedIcon: false,
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ]),
+            const SizedBox(height: 6),
+            Text(
+              smartMode
+                  ? 'Smart: jawaban ringkas berbasis sumber resmi UGM'
+                  : 'Search: daftar hasil pencarian lintas kategori',
+              style: const TextStyle(fontSize: 11, color: textSecondary),
+            ),
+          ]),
         ),
         Expanded(child: messages.isEmpty
             ? ListView(
@@ -989,29 +1047,39 @@ class _AiScreenState extends State<AiScreen> {
                       Text(message.text, style: const TextStyle(height: 1.45)),
                       if (message.sources.isNotEmpty) ...[
                         const Divider(height: 24),
-                        const Text('Sumber', style: TextStyle(fontWeight: FontWeight.w800)),
+                        Text(message.sourceLabel.isEmpty ? 'Sumber' : message.sourceLabel, style: const TextStyle(fontWeight: FontWeight.w800)),
                         const SizedBox(height: 4),
-                        ...message.sources.take(4).map((source) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Material(
-                            color: const Color(0xFFEDF2F8),
-                            borderRadius: BorderRadius.circular(12),
-                            child: InkWell(
+                        ...message.sources.take(4).toList().asMap().entries.map((entry) {
+                          final idx = entry.key + 1;
+                          final source = entry.value;
+                          final domain = domainOf(source.url);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Material(
+                              color: const Color(0xFFEDF2F8),
                               borderRadius: BorderRadius.circular(12),
-                              onTap: () => DeviceBridge.openUrl(source.url),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                child: Row(children: [
-                                  const Icon(Icons.link, size: 16, color: ugmBlue),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(source.title, maxLines: 2, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
-                                  const SizedBox(width: 6),
-                                  const Icon(Icons.open_in_new, size: 15, color: ugmBlue),
-                                ]),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () => DeviceBridge.openUrl(source.url),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  child: Row(children: [
+                                    CircleAvatar(radius: 10, backgroundColor: ugmBlue, child: Text('$idx', style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w800))),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text(source.title, maxLines: 2, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                        if (domain.isNotEmpty) Text(domain, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: textSecondary)),
+                                      ]),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.open_in_new, size: 15, color: ugmBlue),
+                                  ]),
+                                ),
                               ),
                             ),
-                          ),
-                        )),
+                          );
+                        }),
                       ],
                       if (!message.user) ...[
                         const SizedBox(height: 6),
@@ -1024,9 +1092,21 @@ class _AiScreenState extends State<AiScreen> {
                           ),
                           TextButton.icon(
                             style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
-                            onPressed: _feedback,
+                            onPressed: () => _shareAnswer(message.text),
+                            icon: const Icon(Icons.share, size: 15),
+                            label: const Text('Bagikan', style: TextStyle(fontSize: 12)),
+                          ),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: () => _feedback(helpful: true),
                             icon: const Icon(Icons.thumb_up_outlined, size: 15),
                             label: const Text('Membantu', style: TextStyle(fontSize: 12)),
+                          ),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: () => _feedback(helpful: false),
+                            icon: const Icon(Icons.thumb_down_outlined, size: 15),
+                            label: const Text('Tidak membantu', style: TextStyle(fontSize: 12)),
                           ),
                         ]),
                       ],
@@ -1034,7 +1114,13 @@ class _AiScreenState extends State<AiScreen> {
                   ),
                 );
               })),
-        if (loading) const LinearProgressIndicator(),
+        if (loading) ...[
+          const LinearProgressIndicator(),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(_status, style: const TextStyle(fontSize: 12, color: textSecondary)),
+          ),
+        ],
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(children: [
@@ -1062,6 +1148,15 @@ class _AiScreenState extends State<AiScreen> {
         ),
         const Padding(padding: EdgeInsets.only(bottom: 7), child: Text('Jawaban AI dapat tidak 100% akurat.', style: TextStyle(fontSize: 12, color: textSecondary))),
       ]);
+}
+
+/// Ekstrak domain dari URL untuk label citation card (Sprint 4).
+String domainOf(String url) {
+  try {
+    return Uri.parse(url).host.replaceFirst(RegExp(r'^www\.'), '');
+  } catch (_) {
+    return '';
+  }
 }
 
 /// Filter layanan berdasarkan nama, deskripsi, atau unit pengelola (case-insensitive).

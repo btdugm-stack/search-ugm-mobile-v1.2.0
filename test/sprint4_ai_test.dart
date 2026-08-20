@@ -29,6 +29,40 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('AI: segmented mode Smart/Search + status composer (Sprint 4)', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: AiScreen(api: ApiClient()))),
+    );
+
+    // Segmented control 2 mode + penjelasan
+    expect(find.text('Smart'), findsOneWidget);
+    expect(find.text('Search'), findsOneWidget);
+    expect(find.textContaining('jawaban ringkas berbasis sumber'), findsOneWidget);
+
+    // Toggle ke Search → penjelasan berubah
+    await tester.tap(find.text('Search'));
+    await tester.pump();
+    expect(find.textContaining('daftar hasil pencarian'), findsOneWidget);
+
+    // Kirim query → mode Search memanggil API (di test HTTP ditolak → bubble error)
+    await tester.enterText(find.byType(TextField), 'beasiswa');
+    await tester.pump();
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.send));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Maaf, DSH belum dapat menjawab'), findsOneWidget);
+
+    expect(tester.takeException(), isNull);
+  });
+
+  test('domainOf mengekstrak domain dari URL (Sprint 4)', () {
+    expect(domainOf('https://www.youtube.com/watch?v=x'), 'youtube.com');
+    expect(domainOf('https://ugm.ac.id/berita'), 'ugm.ac.id');
+    expect(domainOf('https://search.ugm.ac.id/ai/'), 'search.ugm.ac.id');
+    expect(domainOf(''), '');
+    expect(domainOf('bukan-url'), '');
+  });
+
   testWidgets('Tools AI: label Buka situs UGM pada tiap card (Sprint 4)', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: ToolsAiScreen()));
 
