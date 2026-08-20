@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show SocketException;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -215,8 +216,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: explore.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: MediaQuery.sizeOf(context).width < 380 ? 2 : 3,
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 8,
                   childAspectRatio: 1.15,
@@ -269,12 +270,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     Widget quickAccessGrid(List<({String label, String type, IconData icon})> items) {
+      // 2 kolom di layar sempit / text scale besar (Sprint 3.1).
+      final crossCount = MediaQuery.sizeOf(context).width < 380 ? 2 : 3;
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: items.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossCount,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
           childAspectRatio: .95,
@@ -513,6 +516,13 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _onQueryChanged(String value) {
     _debounce?.cancel();
+    if (value.trim().length < 2) {
+      // Autocomplete mulai minimal 2 karakter (Sprint 3.2): kembali ke empty state.
+      if (mounted && (response != null || loading)) {
+        setState(() { response = null; error = null; loading = false; _requestSeq++; });
+      }
+      return;
+    }
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) search();
     });
@@ -539,7 +549,9 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (e) {
       if (!mounted || seq != _requestSeq) return;
-      setState(() => error = '$e');
+      // State offline eksplisit (Sprint 3.2): SocketException/Timeout → pesan jaringan.
+      final isOffline = e is SocketException || e is TimeoutException;
+      setState(() => error = isOffline ? 'Tidak ada koneksi internet. Periksa jaringan Anda.' : '$e');
     } finally {
       if (mounted && seq == _requestSeq) setState(() => loading = false);
     }
@@ -842,6 +854,10 @@ class ResultCard extends StatelessWidget {
             Row(children: [
               if (item.publishDate.isNotEmpty) ...[
                 Flexible(child: Text(item.publishDate, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: textSecondary))),
+                const SizedBox(width: 8),
+              ],
+              if (item.owner.isNotEmpty) ...[
+                Flexible(child: Text(item.owner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: ugmBlue))),
                 const SizedBox(width: 8),
               ],
               const Icon(Icons.verified_outlined, size: 15, color: ugmBlue),

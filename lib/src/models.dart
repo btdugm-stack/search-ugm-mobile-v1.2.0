@@ -8,6 +8,7 @@ class SearchItem {
     required this.source,
     this.dharma = '',
     this.publishDate = '',
+    this.owner = '',
   });
 
   final String id;
@@ -18,6 +19,7 @@ class SearchItem {
   final String source;
   final String dharma;
   final String publishDate;
+  final String owner;
 
   factory SearchItem.fromJson(Map<String, dynamic> json) => SearchItem(
         id: '${json['id'] ?? ''}',
@@ -28,6 +30,7 @@ class SearchItem {
         source: '${json['source_name'] ?? json['source_origin'] ?? json['source'] ?? 'UGM'}',
         dharma: '${json['dharma'] ?? ''}',
         publishDate: '${json['publish_date_text'] ?? json['upload_date'] ?? ''}',
+        owner: '${json['owner'] ?? ''}',
       );
 }
 

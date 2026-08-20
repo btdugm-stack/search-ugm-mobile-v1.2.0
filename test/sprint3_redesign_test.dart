@@ -79,6 +79,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Cari: autocomplete mulai setelah minimal 2 karakter (Sprint 3.2)', (tester) async {
+    await tester.pumpWidget(const SearchUgmApp());
+
+    // Buka tab Cari
+    await tester.tap(find.text('Cari'));
+    await tester.pumpAndSettle();
+
+    // 1 karakter: tidak memicu pencarian, empty state tetap tampil
+    await tester.enterText(find.byType(TextField), 'a');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Coba cari'), findsOneWidget);
+
+    // 2 karakter: memicu pencarian — empty state digantikan (loading/error/hasil)
+    await tester.enterText(find.byType(TextField), 'be');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+    expect(find.text('Coba cari'), findsNothing);
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('ResultCard compact + highlight keyword tanpa error (Sprint 3.3)', (tester) async {
     const item = SearchItem(
       id: '1',
