@@ -10,6 +10,10 @@ const ugmBlue = Color(0xFF003F88);
 const navy = Color(0xFF071D49);
 const surface = Color(0xFFF5F7FB);
 
+// Design token Sprint 2 — teks sekunder aksesibel (WCAG AA 6.19:1 vs putih).
+const textSecondary = Color(0xFF616161);
+const textTertiary = Color(0xFF554E46);
+
 class SearchUgmApp extends StatelessWidget {
   const SearchUgmApp({super.key});
 
@@ -216,14 +220,28 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 25),
               const Text('Ada yang bisa kami bantu hari ini?', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                textInputAction: TextInputAction.search,
-                onSubmitted: widget.onSearch,
-                decoration: InputDecoration(
-                  hintText: 'Cari apa saja di UGM…',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => widget.onSearch(controller.text)),
+              Semantics(
+                textField: true,
+                label: 'Cari apa saja di UGM',
+                child: TextField(
+                  controller: controller,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (value) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    widget.onSearch(value);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari apa saja di UGM…',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: IconButton(
+                      tooltip: 'Cari',
+                      icon: const Icon(Icons.arrow_forward),
+                      onPressed: () {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                        widget.onSearch(controller.text);
+                      },
+                    ),
+                  ),
                 ),
               ),
             ]),
@@ -312,7 +330,7 @@ class _FeatureCard extends StatelessWidget {
               const SizedBox(height: 10),
               Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 3),
-              Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              Text(subtitle, style: const TextStyle(color: textSecondary, fontSize: 12)),
             ]),
           ),
         ),
@@ -412,9 +430,39 @@ class _SearchScreenState extends State<SearchScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Row(children: [
-            Expanded(child: TextField(controller: controller, textInputAction: TextInputAction.search, onSubmitted: (_) => search(), decoration: InputDecoration(hintText: 'Cari apa saja di UGM…', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(icon: const Icon(Icons.close), onPressed: () => controller.clear())))),
+            Expanded(
+              child: Semantics(
+                textField: true,
+                label: 'Cari apa saja di UGM',
+                child: TextField(
+                  controller: controller,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    search();
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari apa saja di UGM…',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: IconButton(
+                      tooltip: 'Hapus teks',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => controller.clear(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
-            Badge(isLabelVisible: activeFilters > 0, label: Text('$activeFilters'), child: IconButton.filledTonal(onPressed: showFilters, icon: const Icon(Icons.tune))),
+            Badge(
+              isLabelVisible: activeFilters > 0,
+              label: Text('$activeFilters'),
+              child: IconButton.filledTonal(
+                tooltip: 'Filter',
+                onPressed: showFilters,
+                icon: const Icon(Icons.tune),
+              ),
+            ),
           ]),
         ),
         SizedBox(height: 42, child: ListView.separated(
@@ -453,7 +501,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 Text(
                   '${response!.total} hasil',
                   style: const TextStyle(
-                    color: Colors.grey,
+                    color: textSecondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -484,7 +532,7 @@ class ResultCard extends StatelessWidget {
             ]),
             const SizedBox(height: 5),
             Text(item.title, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            if (item.description.isNotEmpty) ...[const SizedBox(height: 7), Text(item.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade700, height: 1.35))],
+            if (item.description.isNotEmpty) ...[const SizedBox(height: 7), Text(item.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textSecondary, height: 1.35))],
             const SizedBox(height: 9),
             Row(children: [const Icon(Icons.verified_outlined, size: 15, color: ugmBlue), const SizedBox(width: 5), Expanded(child: Text(item.source, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: ugmBlue))), const Icon(Icons.open_in_new, size: 16)]),
           ])),
@@ -510,6 +558,7 @@ class _AiScreenState extends State<AiScreen> {
     final question = controller.text.trim();
     if (question.isEmpty || loading) return;
     controller.clear();
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() { messages.add((user: true, text: question, sources: const [])); loading = true; });
     try {
       final answer = await widget.api.askSmart(question, sessionId);
@@ -544,7 +593,28 @@ class _AiScreenState extends State<AiScreen> {
                       if (message.sources.isNotEmpty) ...[
                         const Divider(height: 24),
                         const Text('Sumber', style: TextStyle(fontWeight: FontWeight.w800)),
-                        ...message.sources.take(4).map((source) => ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.link, size: 18), title: Text(source.title, maxLines: 2), onTap: () => DeviceBridge.openUrl(source.url))),
+                        const SizedBox(height: 4),
+                        ...message.sources.take(4).map((source) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Material(
+                            color: const Color(0xFFEDF2F8),
+                            borderRadius: BorderRadius.circular(12),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => DeviceBridge.openUrl(source.url),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                child: Row(children: [
+                                  const Icon(Icons.link, size: 16, color: ugmBlue),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(source.title, maxLines: 2, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.open_in_new, size: 15, color: ugmBlue),
+                                ]),
+                              ),
+                            ),
+                          ),
+                        )),
                       ],
                     ]),
                   ),
@@ -553,14 +623,42 @@ class _AiScreenState extends State<AiScreen> {
         if (loading) const LinearProgressIndicator(),
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(children: [Expanded(child: TextField(controller: controller, maxLines: 3, minLines: 1, onSubmitted: (_) => send(), decoration: const InputDecoration(hintText: 'Tanya lebih lanjut…', prefixIcon: Icon(Icons.mic_none)))), const SizedBox(width: 8), IconButton.filled(onPressed: send, icon: const Icon(Icons.send))]),
+          child: Row(children: [
+            Expanded(
+              child: Semantics(
+                textField: true,
+                label: 'Tanya lebih lanjut',
+                child: TextField(
+                  controller: controller,
+                  maxLines: 3,
+                  minLines: 1,
+                  onSubmitted: (_) => send(),
+                  decoration: const InputDecoration(hintText: 'Tanya lebih lanjut…', prefixIcon: Icon(Icons.mic_none)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              tooltip: 'Kirim',
+              onPressed: send,
+              icon: const Icon(Icons.send),
+            ),
+          ]),
         ),
-        const Padding(padding: EdgeInsets.only(bottom: 7), child: Text('Jawaban AI dapat tidak 100% akurat.', style: TextStyle(fontSize: 10, color: Colors.grey))),
+        const Padding(padding: EdgeInsets.only(bottom: 7), child: Text('Jawaban AI dapat tidak 100% akurat.', style: TextStyle(fontSize: 12, color: textSecondary))),
       ]);
 }
 
-class ServicesScreen extends StatelessWidget {
+class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
+
+  @override
+  State<ServicesScreen> createState() => _ServicesScreenState();
+}
+
+class _ServicesScreenState extends State<ServicesScreen> {
+  final controller = TextEditingController();
+
   static const services = [
     ('SIMASTER', 'Sistem informasi akademik UGM', 'https://simaster.ugm.ac.id'),
     ('ULT', 'Unit Layanan Terpadu', 'https://ult.ugm.ac.id/eservices/portal/'),
@@ -570,17 +668,47 @@ class ServicesScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
-        const Text('Layanan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: navy)),
-        const SizedBox(height: 6),
-        const Text('Direktori layanan digital UGM'),
-        const SizedBox(height: 18),
-        TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari layanan…'), onChanged: (_) {}),
-        const SizedBox(height: 18),
-        const SectionTitle('Layanan Populer'),
-        const SizedBox(height: 10),
-        ...services.map((item) => Padding(padding: const EdgeInsets.only(bottom: 9), child: Card(child: ListTile(onTap: () => DeviceBridge.openUrl(item.$3), leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Text(item.$1.characters.first, style: const TextStyle(color: ugmBlue, fontWeight: FontWeight.w900))), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(item.$2), trailing: const Icon(Icons.open_in_new, size: 18))))),
-      ]);
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = controller.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? services
+        : services
+              .where((item) =>
+                  item.$1.toLowerCase().contains(query) ||
+                  item.$2.toLowerCase().contains(query))
+              .toList();
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      const Text('Layanan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: navy)),
+      const SizedBox(height: 6),
+      const Text('Direktori layanan digital UGM', style: TextStyle(color: textSecondary)),
+      const SizedBox(height: 18),
+      Semantics(
+        textField: true,
+        label: 'Cari layanan',
+        child: TextField(
+          controller: controller,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cari layanan…'),
+        ),
+      ),
+      const SizedBox(height: 18),
+      const SectionTitle('Layanan Populer'),
+      const SizedBox(height: 10),
+      if (filtered.isEmpty)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(child: Text('Tidak ada layanan yang cocok dengan pencarian.')),
+        )
+      else
+        ...filtered.map((item) => Padding(padding: const EdgeInsets.only(bottom: 9), child: Card(child: ListTile(onTap: () => DeviceBridge.openUrl(item.$3), leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Text(item.$1.characters.first, style: const TextStyle(color: ugmBlue, fontWeight: FontWeight.w900))), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(item.$2), trailing: const Icon(Icons.open_in_new, size: 18))))),
+    ]);
+  }
 }
 
 class HistoryScreen extends StatefulWidget {
@@ -623,7 +751,7 @@ class ToolsAiScreen extends StatelessWidget {
           Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(gradient: const LinearGradient(colors: [navy, ugmBlue]), borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.auto_fix_high, color: Colors.white, size: 34), SizedBox(height: 12), Text('AI Tools UGM', style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900)), SizedBox(height: 5), Text('Akses kumpulan alat AI pada versi web Search UGM.', style: TextStyle(color: Colors.white70))])),
           const SizedBox(height: 16),
           ...tools.map((tool) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Card(child: ListTile(contentPadding: const EdgeInsets.all(12), leading: CircleAvatar(backgroundColor: const Color(0xFFEAF1FF), child: Icon(tool.$3, color: ugmBlue)), title: Text(tool.$1, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text(tool.$2)), trailing: const Icon(Icons.open_in_new), onTap: () => DeviceBridge.openUrl(tool.$4))))),
-          const Padding(padding: EdgeInsets.only(top: 5), child: Text('Beberapa Tools AI dibuka pada situs resmi UGM dan dapat meminta autentikasi sesuai kebijakan layanannya.', style: TextStyle(fontSize: 12, color: Colors.grey))),
+          const Padding(padding: EdgeInsets.only(top: 5), child: Text('Beberapa Tools AI dibuka pada situs resmi UGM dan dapat meminta autentikasi sesuai kebijakan layanannya.', style: TextStyle(fontSize: 12, color: textSecondary))),
         ]),
       );
 }
@@ -934,7 +1062,7 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
                                                 overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
                                                   fontSize: 12,
-                                                  color: Colors.grey,
+                                                  color: textSecondary,
                                                 ),
                                               ),
                                             ],
@@ -1157,11 +1285,11 @@ class _UgmTileMapState extends State<UgmTileMap> {
             return Positioned(left: left - 19, top: top - 38, child: Semantics(label: item.name, button: true, child: GestureDetector(onTap: () => widget.onSelect(item), child: Icon(Icons.location_pin, color: widget.selected?.id == item.id ? Colors.orange : ugmBlue, size: widget.selected?.id == item.id ? 46 : 38))));
           }),
         Positioned(right: 12, bottom: 150, child: Column(children: [
-          FloatingActionButton.small(heroTag: 'zoomIn', onPressed: zoom < 19 ? () => changeZoom(1) : null, child: const Icon(Icons.add)),
+          FloatingActionButton.small(heroTag: 'zoomIn', tooltip: 'Perbesar', onPressed: zoom < 19 ? () => changeZoom(1) : null, child: const Icon(Icons.add)),
           const SizedBox(height: 7),
-          FloatingActionButton.small(heroTag: 'zoomOut', onPressed: zoom > 11 ? () => changeZoom(-1) : null, child: const Icon(Icons.remove)),
+          FloatingActionButton.small(heroTag: 'zoomOut', tooltip: 'Perkecil', onPressed: zoom > 11 ? () => changeZoom(-1) : null, child: const Icon(Icons.remove)),
           const SizedBox(height: 7),
-          FloatingActionButton.small(heroTag: 'resetMap', onPressed: () => setState(() { latitude = -7.7707; longitude = 110.3776; zoom = 15; }), child: const Icon(Icons.my_location)),
+          FloatingActionButton.small(heroTag: 'resetMap', tooltip: 'Lokasi saya', onPressed: () => setState(() { latitude = -7.7707; longitude = 110.3776; zoom = 15; }), child: const Icon(Icons.my_location)),
         ])),
       ])),
     );
@@ -1175,7 +1303,7 @@ class _EmptyState extends StatelessWidget {
   final String subtitle;
 
   @override
-  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: ugmBlue), const SizedBox(height: 14), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)), const SizedBox(height: 7), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, height: 1.4))])));
+  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: ugmBlue), const SizedBox(height: 14), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)), const SizedBox(height: 7), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: textSecondary, height: 1.4))])));
 }
 
 class _ErrorView extends StatelessWidget {
