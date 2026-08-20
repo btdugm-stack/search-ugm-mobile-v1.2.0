@@ -11,12 +11,13 @@ void main() {
     expect(find.text('Histori'), findsOneWidget);
     expect(find.text('Profil'), findsNothing);
     expect(find.text('Akses Cepat'), findsOneWidget);
+    expect(find.text('Lihat semua (13)'), findsOneWidget);
 
+    // 'Lihat semua' membuka bottom sheet kategori lengkap
     await tester.tap(find.text('Lihat semua (13)'));
-    await tester.pump(const Duration(milliseconds: 180));
-    expect(tester.takeException(), isNull);
     await tester.pumpAndSettle();
-    expect(find.text('Ringkas'), findsOneWidget);
+    expect(find.text('Semua Kategori'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   test('browse menggunakan parameter kategori yang sama dengan versi web', () {

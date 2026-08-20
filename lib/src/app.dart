@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -53,12 +54,20 @@ class _MainShellState extends State<MainShell> {
   int index = 0;
   String initialQuery = '';
   String initialType = 'all';
+  String initialAiPrompt = '';
 
   void openSearch({String query = '', String type = 'all'}) {
     setState(() {
       initialQuery = query;
       initialType = type;
       index = 1;
+    });
+  }
+
+  void openAi({String prompt = ''}) {
+    setState(() {
+      initialAiPrompt = prompt;
+      index = 2;
     });
   }
 
@@ -70,12 +79,12 @@ class _MainShellState extends State<MainShell> {
       HomeScreen(
         onSearch: (query) => openSearch(query: query),
         onBrowse: (type) => openSearch(type: type),
-        onAi: () => setState(() => index = 2),
+        onAi: (prompt) => openAi(prompt: prompt),
         onTools: () => push(const ToolsAiScreen()),
         onMap: () => push(FacilityMapScreen(api: api)),
       ),
       SearchScreen(key: ValueKey('$initialQuery-$initialType'), api: api, initialQuery: initialQuery, initialType: initialType),
-      AiScreen(api: api),
+      AiScreen(key: ValueKey('ai-$initialAiPrompt'), api: api, initialPrompt: initialAiPrompt),
       const ServicesScreen(),
       const HistoryScreen(),
     ];
@@ -121,7 +130,7 @@ class HomeScreen extends StatefulWidget {
   });
   final ValueChanged<String> onSearch;
   final ValueChanged<String> onBrowse;
-  final VoidCallback onAi;
+  final ValueChanged<String> onAi;
   final VoidCallback onTools;
   final VoidCallback onMap;
 
@@ -131,7 +140,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final controller = TextEditingController();
-  bool expanded = false;
 
   static const explore = <({String label, String type, IconData icon})>[
     (label: 'Layanan', type: 'service', icon: Icons.apps),
@@ -149,6 +157,88 @@ class _HomeScreenState extends State<HomeScreen> {
     (label: 'Video', type: 'video', icon: Icons.play_circle_outline),
   ];
 
+  // Contoh pertanyaan untuk card DSH Menjawab (Sprint 3.1).
+  static const aiStarterPrompts = [
+    'Apa tugas mahasiswa KKN?',
+    'Bagaimana cara daftar SIMASTER?',
+    'Kapan pendaftaran beasiswa dibuka?',
+  ];
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  void showAllCategories() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Semua Kategori', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 16),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: explore.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.15,
+                ),
+                itemBuilder: (_, i) => _categoryTile(explore[i]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryTile(({String label, String type, IconData icon}) item) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: item.type == 'facility'
+          ? widget.onMap
+          : () => widget.onBrowse(item.type),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE6EAF1)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(item.icon, color: ugmBlue, size: 25),
+              const SizedBox(height: 7),
+              Text(
+                item.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget quickAccessGrid(List<({String label, String type, IconData icon})> items) {
@@ -157,47 +247,12 @@ class _HomeScreenState extends State<HomeScreen> {
         physics: const NeverScrollableScrollPhysics(),
         itemCount: items.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
+          crossAxisCount: 3,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
-          childAspectRatio: .82,
+          childAspectRatio: .95,
         ),
-        itemBuilder: (_, i) {
-          final item = items[i];
-          return InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: item.type == 'facility'
-                ? widget.onMap
-                : () => widget.onBrowse(item.type),
-            child: Ink(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE6EAF1)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(item.icon, color: ugmBlue, size: 25),
-                    const SizedBox(height: 7),
-                    Text(
-                      item.label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+        itemBuilder: (_, i) => _categoryTile(items[i]),
       );
     }
 
@@ -250,36 +305,12 @@ class _HomeScreenState extends State<HomeScreen> {
         SliverPadding(
           padding: const EdgeInsets.all(18),
           sliver: SliverList.list(children: [
-            SectionTitle('Akses Cepat', trailing: TextButton.icon(
-              onPressed: () => setState(() => expanded = !expanded),
-              icon: AnimatedRotation(
-                turns: expanded ? .5 : 0,
-                duration: const Duration(milliseconds: 380),
-                curve: Curves.easeInOutCubic,
-                child: const Icon(Icons.expand_more),
-              ),
-              label: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: Text(
-                  expanded ? 'Ringkas' : 'Lihat semua (${explore.length})',
-                  key: ValueKey(expanded),
-                ),
-              ),
+            SectionTitle('Akses Cepat', trailing: TextButton(
+              onPressed: showAllCategories,
+              child: Text('Lihat semua (${explore.length})'),
             )),
             const SizedBox(height: 10),
-            AnimatedCrossFade(
-              firstChild: quickAccessGrid(explore.take(10).toList()),
-              secondChild: quickAccessGrid(explore),
-              crossFadeState: expanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 420),
-              reverseDuration: const Duration(milliseconds: 360),
-              firstCurve: Curves.easeOutCubic,
-              secondCurve: Curves.easeInCubic,
-              sizeCurve: Curves.easeInOutCubicEmphasized,
-              alignment: Alignment.topCenter,
-            ),
+            quickAccessGrid(explore.take(6).toList()),
             const SizedBox(height: 22),
             const SectionTitle('Fitur Khusus'),
             const SizedBox(height: 10),
@@ -291,18 +322,36 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 14),
             Card(
               color: const Color(0xFFEAF1FF),
-              child: ListTile(
-                onTap: widget.onAi,
-                leading: const CircleAvatar(backgroundColor: ugmBlue, child: Icon(Icons.auto_awesome, color: Colors.white)),
-                title: const Text('DSH Menjawab — Smart', style: TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: const Text('Jawaban ringkas dari sumber UGM terpercaya.'),
-                trailing: const Icon(Icons.chevron_right),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(children: [
+                      CircleAvatar(backgroundColor: ugmBlue, child: Icon(Icons.auto_awesome, color: Colors.white)),
+                      SizedBox(width: 10),
+                      Expanded(child: Text('DSH Menjawab — Smart', style: TextStyle(fontWeight: FontWeight.w800))),
+                    ]),
+                    const SizedBox(height: 4),
+                    const Text('Jawaban ringkas dari sumber UGM terpercaya.', style: TextStyle(fontSize: 13, color: textSecondary)),
+                    const SizedBox(height: 10),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final prompt in aiStarterPrompts)
+                        ActionChip(
+                          label: Text(prompt, style: const TextStyle(fontSize: 12)),
+                          onPressed: () => widget.onAi(prompt),
+                        ),
+                    ]),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),
-            const SectionTitle('Populer Minggu Ini'),
+            const SectionTitle('Rekomendasi untuk Anda'),
             const SizedBox(height: 10),
             Card(child: ListTile(onTap: () => widget.onSearch('beasiswa S2'), leading: const Icon(Icons.school_outlined, color: ugmBlue), title: const Text('Beasiswa S2 Dalam Negeri'), subtitle: const Text('Temukan informasi dan tenggat terbaru'), trailing: const Icon(Icons.arrow_forward_ios, size: 16))),
+            Card(child: ListTile(onTap: () => widget.onSearch('KKN'), leading: const Icon(Icons.groups_outlined, color: ugmBlue), title: const Text('Program KKN UGM'), subtitle: const Text('Informasi pendaftaran dan laporan KKN'), trailing: const Icon(Icons.arrow_forward_ios, size: 16))),
+            Card(child: ListTile(onTap: () => widget.onSearch('e-learning'), leading: const Icon(Icons.school_outlined, color: ugmBlue), title: const Text('E-Learning UGM'), subtitle: const Text('Akses pembelajaran daring UGM'), trailing: const Icon(Icons.arrow_forward_ios, size: 16))),
             const SizedBox(height: 30),
           ]),
         ),
@@ -355,12 +404,17 @@ class _SearchScreenState extends State<SearchScreen> {
   SearchResponse? response;
   String? error;
   bool loading = false;
+  Timer? _debounce;
+  int _requestSeq = 0;
+  List<String> history = const [];
 
   static const types = <String, String>{
     'all': 'Semua', 'service': 'Layanan', 'news': 'Berita', 'product': 'Produk', 'people': 'Dosen',
     'publication': 'Publikasi', 'patent': 'HKI', 'tech4disaster': 'Tech4disaster', 'legal': 'Hukum',
     'pidato': 'Pidato', 'facility': 'Fasilitas', 'event': 'Agenda', 'karir': 'Karir', 'video': 'Video',
   };
+
+  static const suggestions = ['Beasiswa', 'SIMASTER', 'Kalender akademik', 'Perpustakaan', 'Kartu mahasiswa'];
 
   int get activeFilters => (dharma.isNotEmpty ? 1 : 0) + (year.isNotEmpty ? 1 : 0);
 
@@ -369,23 +423,50 @@ class _SearchScreenState extends State<SearchScreen> {
     super.initState();
     controller = TextEditingController(text: widget.initialQuery);
     type = widget.initialType;
+    _loadHistory();
     if (controller.text.isNotEmpty || type != 'all') search();
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadHistory() async {
+    final result = await DeviceBridge.getHistory();
+    if (mounted) setState(() => history = result);
+  }
+
+  void _onQueryChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) search();
+    });
+  }
+
   Future<void> search() async {
-    if (controller.text.trim().isEmpty && type == 'all') return;
+    if (controller.text.trim().isEmpty && type == 'all') {
+      if (mounted) setState(() { response = null; error = null; loading = false; });
+      return;
+    }
+    final seq = ++_requestSeq;
     setState(() { loading = true; error = null; });
     try {
       if (controller.text.trim().isNotEmpty) {
         final old = await DeviceBridge.getHistory();
         await DeviceBridge.saveHistory([controller.text.trim(), ...old.where((item) => item != controller.text.trim())]);
+        await _loadHistory();
       }
       final result = await widget.api.search(query: controller.text, type: type, dharma: dharma, year: year);
-      if (mounted) setState(() => response = result);
+      if (!mounted || seq != _requestSeq) return;
+      setState(() => response = result);
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
+      if (!mounted || seq != _requestSeq) return;
+      setState(() => error = '$e');
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && seq == _requestSeq) setState(() => loading = false);
     }
   }
 
@@ -437,6 +518,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: TextField(
                   controller: controller,
                   textInputAction: TextInputAction.search,
+                  onChanged: _onQueryChanged,
                   onSubmitted: (_) {
                     FocusManager.instance.primaryFocus?.unfocus();
                     search();
@@ -447,7 +529,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     suffixIcon: IconButton(
                       tooltip: 'Hapus teks',
                       icon: const Icon(Icons.close),
-                      onPressed: () => controller.clear(),
+                      onPressed: () {
+                        controller.clear();
+                        _onQueryChanged('');
+                      },
                     ),
                   ),
                 ),
@@ -465,10 +550,48 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ]),
         ),
-        SizedBox(height: 42, child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, itemCount: types.length, separatorBuilder: (_, _) => const SizedBox(width: 7),
-          itemBuilder: (_, i) { final entry = types.entries.elementAt(i); return ChoiceChip(label: Text(entry.value), selected: type == entry.key, onSelected: (_) { setState(() => type = entry.key); if (controller.text.isNotEmpty || type != 'all') search(); }); },
-        )),
+        SizedBox(
+          height: 42,
+          child: Stack(children: [
+            Positioned.fill(
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                scrollDirection: Axis.horizontal,
+                itemCount: types.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 7),
+                itemBuilder: (_, i) {
+                  final entry = types.entries.elementAt(i);
+                  return ChoiceChip(
+                    label: Text(entry.value),
+                    selected: type == entry.key,
+                    onSelected: (_) {
+                      setState(() => type = entry.key);
+                      if (controller.text.isNotEmpty || type != 'all') search();
+                    },
+                  );
+                },
+              ),
+            ),
+            // Edge fade kanan — indikasi chip masih bisa digeser (Sprint 3.2).
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: 36,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [surface.withValues(alpha: 0), surface],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        ),
         if (dharma.isNotEmpty || year.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Filter aktif: ${[if (dharma.isNotEmpty) dharma, if (year.isNotEmpty) year].join(' • ')}', style: const TextStyle(color: ugmBlue, fontWeight: FontWeight.w600)))),
         const SizedBox(height: 8),
         Expanded(child: _searchBody()),
@@ -477,7 +600,41 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _searchBody() {
     if (loading) return const Center(child: CircularProgressIndicator());
     if (error != null) return _ErrorView(message: error!, retry: search);
-    if (response == null) return const _EmptyState(icon: Icons.manage_search, title: 'Cari informasi UGM', subtitle: 'Gunakan kata kunci, kategori, dan filter untuk hasil yang lebih tepat.');
+    if (response == null) {
+      // Empty state dengan tindakan lanjutan: histori + suggestion (Sprint 3.2).
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        children: [
+          if (history.isNotEmpty) ...[
+            const Text('Pencarian Terakhir', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: navy)),
+            const SizedBox(height: 4),
+            ...history.take(8).map((h) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.history, size: 19, color: textSecondary),
+                  title: Text(h, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  onTap: () {
+                    controller.text = h;
+                    search();
+                  },
+                )),
+            const SizedBox(height: 14),
+          ],
+          const Text('Coba cari', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: navy)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final s in suggestions)
+              ActionChip(
+                label: Text(s),
+                onPressed: () {
+                  controller.text = s;
+                  search();
+                },
+              ),
+          ]),
+        ],
+      );
+    }
     if (response!.items.isEmpty) return const _EmptyState(icon: Icons.search_off, title: 'Tidak ada hasil', subtitle: 'Coba kata kunci atau filter yang berbeda.');
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -509,15 +666,39 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           );
         }
-        return ResultCard(item: response!.items[i - 1]);
+        return ResultCard(item: response!.items[i - 1], query: controller.text);
       },
     );
   }
 }
 
 class ResultCard extends StatelessWidget {
-  const ResultCard({super.key, required this.item});
+  const ResultCard({super.key, required this.item, this.query = ''});
   final SearchItem item;
+  final String query;
+
+  /// Menyorot kata kunci yang cocok dengan query (case-insensitive).
+  TextSpan _highlight(String text, TextStyle style) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return TextSpan(text: text, style: style);
+    final lower = text.toLowerCase();
+    final spans = <TextSpan>[];
+    var start = 0;
+    while (true) {
+      final idx = lower.indexOf(q, start);
+      if (idx < 0) {
+        spans.add(TextSpan(text: text.substring(start), style: style));
+        break;
+      }
+      if (idx > start) spans.add(TextSpan(text: text.substring(start, idx), style: style));
+      spans.add(TextSpan(
+        text: text.substring(idx, idx + q.length),
+        style: style.copyWith(color: ugmBlue, fontWeight: FontWeight.w800),
+      ));
+      start = idx + q.length;
+    }
+    return TextSpan(children: spans);
+  }
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -525,15 +706,19 @@ class ResultCard extends StatelessWidget {
         child: Card(child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => DeviceBridge.openUrl(item.url),
-          child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Chip(label: Text(item.type.toUpperCase(), style: const TextStyle(fontSize: 10)), visualDensity: VisualDensity.compact, side: BorderSide.none, backgroundColor: const Color(0xFFEAF1FF)),
               if (item.dharma.isNotEmpty) ...[const SizedBox(width: 7), Expanded(child: Text(item.dharma, style: const TextStyle(fontSize: 11, color: ugmBlue)))],
             ]),
             const SizedBox(height: 5),
-            Text(item.title, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            if (item.description.isNotEmpty) ...[const SizedBox(height: 7), Text(item.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textSecondary, height: 1.35))],
-            const SizedBox(height: 9),
+            Text.rich(
+              _highlight(item.title, const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, height: 1.3)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (item.description.isNotEmpty) ...[const SizedBox(height: 5), Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textSecondary, height: 1.35, fontSize: 13))],
+            const SizedBox(height: 8),
             Row(children: [const Icon(Icons.verified_outlined, size: 15, color: ugmBlue), const SizedBox(width: 5), Expanded(child: Text(item.source, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: ugmBlue))), const Icon(Icons.open_in_new, size: 16)]),
           ])),
         )),
@@ -541,18 +726,36 @@ class ResultCard extends StatelessWidget {
 }
 
 class AiScreen extends StatefulWidget {
-  const AiScreen({super.key, required this.api});
+  const AiScreen({super.key, required this.api, this.initialPrompt = ''});
   final ApiClient api;
+  final String initialPrompt;
 
   @override
   State<AiScreen> createState() => _AiScreenState();
 }
 
 class _AiScreenState extends State<AiScreen> {
-  final controller = TextEditingController();
+  late final TextEditingController controller;
   final sessionId = 'mobile-${DateTime.now().millisecondsSinceEpoch}';
   final messages = <({bool user, String text, List<SearchItem> sources})>[];
   bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(text: widget.initialPrompt);
+    if (widget.initialPrompt.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) send();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
 
   Future<void> send() async {
     final question = controller.text.trim();
