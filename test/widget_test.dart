@@ -68,6 +68,26 @@ void main() {
     expect(s.guideUrl, 'https://ugm.ac.id/panduan');
   });
 
+  test('parseHistItem memisahkan query dan timestamp (Sprint 5.5)', () {
+    final ts = DateTime(2026, 8, 20, 9).millisecondsSinceEpoch;
+    final (query, time) = parseHistItem('beasiswa\u0002$ts');
+    expect(query, 'beasiswa');
+    expect(time, DateTime(2026, 8, 20, 9));
+    // backward compat: item lama tanpa timestamp
+    final (q2, t2) = parseHistItem('KKN');
+    expect(q2, 'KKN');
+    expect(t2, isNull);
+  });
+
+  test('webMercator konsisten dengan world() peta (Sprint 5.5)', () {
+    final p = webMercator(-7.7707, 110.3776, 15);
+    expect(p.x, greaterThan(0));
+    expect(p.y, greaterThan(0));
+    // zoom naik → koordinat membesar
+    final p2 = webMercator(-7.7707, 110.3776, 16);
+    expect(p2.x, closeTo(p.x * 2, 1));
+  });
+
   testWidgets('peta menerima gesture pinch-to-zoom tanpa error', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

@@ -603,6 +603,29 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  /// Histori dikelompokkan per periode (Sprint 5.5): Hari ini/Kemarin/Minggu ini/Sebelumnya.
+  Map<String, List<String>> _groupedHistory() {
+    const order = ['Hari ini', 'Kemarin', 'Minggu ini', 'Sebelumnya'];
+    final map = <String, List<String>>{for (final label in order) label: []};
+    for (final raw in history.take(8)) {
+      final (_, time) = parseHistItem(raw);
+      final label = time == null ? 'Sebelumnya' : _groupLabel(time);
+      map[label]!.add(raw);
+    }
+    return {for (final label in order) if (map[label]!.isNotEmpty) label: map[label]!};
+  }
+
+  String _groupLabel(DateTime t) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(t.year, t.month, t.day);
+    final diff = today.difference(day).inDays;
+    if (diff <= 0) return 'Hari ini';
+    if (diff == 1) return 'Kemarin';
+    if (diff < 7) return 'Minggu ini';
+    return 'Sebelumnya';
+  }
+
   void _onQueryChanged(String value) {
     _debounce?.cancel();
     if (value.trim().length < 2) {
@@ -627,7 +650,10 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       if (controller.text.trim().isNotEmpty) {
         final old = await DeviceBridge.getHistory();
-        await DeviceBridge.saveHistory([controller.text.trim(), ...old.where((item) => item != controller.text.trim())]);
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final q = controller.text.trim();
+        // Simpan dengan timestamp untuk grouping (Sprint 5.5); format `query\u0002ts`.
+        await DeviceBridge.saveHistory(['$q\u0002$now', ...old.where((item) => parseHistItem(item).$1 != q)]);
         await _loadHistory();
       }
       final result = await widget.api.search(query: controller.text, type: type, dharma: dharma, year: year, page: 1);
@@ -809,28 +835,37 @@ class _SearchScreenState extends State<SearchScreen> {
               TextButton(onPressed: _clearHistory, child: const Text('Hapus semua')),
             ]),
             const SizedBox(height: 4),
-            ...history.take(8).map((h) => Dismissible(
-                  key: ValueKey('hist-$h'),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    color: errorSurface,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    child: const Icon(Icons.delete_outline, color: colorError),
+            ..._groupedHistory().entries.expand((entry) => [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, bottom: 2),
+                    child: Text(entry.key, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: textSecondary)),
                   ),
-                  onDismissed: (_) => _removeHistoryItem(h),
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.history, size: 19, color: textSecondary),
-                    title: Text(h, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: const Icon(Icons.north_west, size: 17),
-                    onTap: () {
-                      controller.text = h;
-                      search();
-                    },
-                  ),
-                )),
+                  ...entry.value.map((h) {
+                    final (query, _) = parseHistItem(h);
+                    return Dismissible(
+                      key: ValueKey('hist-$h'),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        color: errorSurface,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(Icons.delete_outline, color: colorError),
+                      ),
+                      onDismissed: (_) => _removeHistoryItem(h),
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.history, size: 19, color: textSecondary),
+                        title: Text(query, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        trailing: const Icon(Icons.north_west, size: 17),
+                        onTap: () {
+                          controller.text = query;
+                          search();
+                        },
+                      ),
+                    );
+                  }),
+                ]),
             const SizedBox(height: 14),
           ],
           const Text('Coba cari', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: navy)),
@@ -1262,6 +1297,16 @@ String domainOf(String url) {
   }
 }
 
+/// Parse item histori berformat `query\u0002timestamp` (Sprint 5.5).
+/// Item lama tanpa timestamp → waktu null (ditampilkan di grup 'Sebelumnya').
+(String, DateTime?) parseHistItem(String raw) {
+  final i = raw.indexOf('\u0002');
+  if (i <= 0) return (raw, null);
+  final ts = int.tryParse(raw.substring(i + 1));
+  if (ts == null) return (raw, null);
+  return (raw.substring(0, i), DateTime.fromMillisecondsSinceEpoch(ts));
+}
+
 /// Filter layanan berdasarkan nama, deskripsi, atau unit pengelola (case-insensitive).
 List<Service> filterServices(List<Service> services, String query) {
   final q = query.trim().toLowerCase();
@@ -1287,6 +1332,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
   List<Service> services = const [];
   bool loading = true;
   String? error;
+  String audienceFilter = '';
+
+  List<String> get audiences =>
+      services.map((e) => e.audience).where((e) => e.isNotEmpty).toSet().toList()..sort();
 
   @override
   void initState() {
@@ -1317,7 +1366,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
     if (loading) return const Center(child: CircularProgressIndicator());
     if (error != null) return _ErrorView(message: error!, retry: load);
 
-    final filtered = filterServices(services, controller.text);
+    final filtered = filterServices(services, controller.text)
+        .where((s) => audienceFilter.isEmpty || s.audience == audienceFilter)
+        .toList();
     return ListView(padding: const EdgeInsets.all(16), children: [
       const Text('Layanan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: navy)),
       const SizedBox(height: 6),
@@ -1335,6 +1386,30 @@ class _ServicesScreenState extends State<ServicesScreen> {
       const SizedBox(height: 8),
       Text('${services.length} layanan tersedia', style: const TextStyle(fontSize: 12, color: textSecondary)),
       const SizedBox(height: 10),
+      if (audiences.isNotEmpty) ...[
+        SizedBox(
+          height: 38,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              ChoiceChip(
+                label: const Text('Semua'),
+                selected: audienceFilter.isEmpty,
+                onSelected: (_) => setState(() => audienceFilter = ''),
+              ),
+              ...audiences.take(6).map((a) => Padding(
+                    padding: const EdgeInsets.only(left: 7),
+                    child: ChoiceChip(
+                      label: Text(a, style: const TextStyle(fontSize: 12)),
+                      selected: audienceFilter == a,
+                      onSelected: (_) => setState(() => audienceFilter = a),
+                    ),
+                  )),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
       if (filtered.isEmpty)
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
@@ -1456,6 +1531,8 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
   Facility? selected;
   bool showGestureHint = true;
   bool listMode = false;
+  math.Point<double> _mapCenter = const math.Point(0, 0);
+  double _mapZoom = 15;
   final searchController = TextEditingController();
 
   List<Facility> get filtered => facilities.where((item) {
@@ -1553,6 +1630,49 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
       style: const ButtonStyle(
         visualDensity: VisualDensity.compact,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
+  /// Tampilkan daftar fasilitas yang berada dalam viewport peta aktif (Sprint 5.5).
+  void _searchArea() {
+    final size = MediaQuery.sizeOf(context);
+    final inView = filtered.where((item) {
+      final p = webMercator(item.latitude, item.longitude, _mapZoom);
+      final left = p.x - _mapCenter.x + size.width / 2;
+      final top = p.y - _mapCenter.y + size.height / 2;
+      return left >= -40 && top >= -40 && left <= size.width + 40 && top <= size.height + 40;
+    }).toList();
+    if (inView.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada fasilitas di area ini. Coba geser peta atau perbesar.')));
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            Text('Fasilitas di area ini (${inView.length})', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: navy)),
+            const SizedBox(height: 4),
+            const Text('Daftar fasilitas dalam layar peta aktif', style: TextStyle(fontSize: 12, color: textSecondary)),
+            const SizedBox(height: 8),
+            ...inView.take(20).map((item) => ListTile(
+                  dense: true,
+                  leading: CircleAvatar(
+                    backgroundColor: facilityCategoryColor(item.category).withValues(alpha: .15),
+                    child: Icon(Icons.location_on_outlined, color: facilityCategoryColor(item.category), size: 18),
+                  ),
+                  title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text('${item.category} • ${item.owner}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() => selected = item);
+                  },
+                )),
+          ],
+        ),
       ),
     );
   }
@@ -1692,6 +1812,10 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
                         facilities: filtered,
                         selected: selected,
                         onSelect: (value) => setState(() => selected = value),
+                        onViewportChanged: (center, zoom) {
+                          _mapCenter = center;
+                          _mapZoom = zoom;
+                        },
                       ),
                     ),
                     SafeArea(
@@ -1704,7 +1828,16 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
                             const SizedBox(height: 10),
                             _filterChips(),
                             const SizedBox(height: 8),
-                            Align(alignment: Alignment.centerLeft, child: _modeToggle()),
+                            Row(children: [
+                              _modeToggle(),
+                              const Spacer(),
+                              TextButton.icon(
+                                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                                onPressed: _searchArea,
+                                icon: const Icon(Icons.center_focus_strong, size: 16),
+                                label: const Text('Cari area ini', style: TextStyle(fontSize: 12)),
+                              ),
+                            ]),
                           ],
                         ),
                       ),
@@ -1882,6 +2015,16 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
   }
 }
 
+/// Proyeksi Web Mercator untuk tile OpenStreetMap (Sprint 5.5 "Cari area ini").
+math.Point<double> webMercator(double lat, double lon, double zoom) {
+  const tileSize = 256.0;
+  final scale = math.pow(2, zoom).toDouble() * tileSize;
+  final x = (lon + 180) / 360 * scale;
+  final sinLat = math.sin(lat * math.pi / 180).clamp(-0.9999, 0.9999);
+  final y = (0.5 - math.log((1 + sinLat) / (1 - sinLat)) / (4 * math.pi)) * scale;
+  return math.Point(x, y);
+}
+
 /// Warna marker/tile berdasarkan kategori fasilitas (Sprint 5.2).
 /// Palet diambil dari token Bagian 7; kategori kosong memakai biru primer.
 Color facilityCategoryColor(String category) {
@@ -1937,10 +2080,12 @@ class _MapFilterChip extends StatelessWidget {
 }
 
 class UgmTileMap extends StatefulWidget {
-  const UgmTileMap({super.key, required this.facilities, required this.selected, required this.onSelect});
+  const UgmTileMap({super.key, required this.facilities, required this.selected, required this.onSelect, this.onViewportChanged});
+
   final List<Facility> facilities;
   final Facility? selected;
   final ValueChanged<Facility> onSelect;
+  final void Function(math.Point<double> center, double zoom)? onViewportChanged;
 
   @override
   State<UgmTileMap> createState() => _UgmTileMapState();
@@ -1954,6 +2099,8 @@ class _UgmTileMapState extends State<UgmTileMap> {
   Size viewportSize = Size.zero;
   double gestureStartZoom = 15;
   math.Point<double> gestureAnchor = const math.Point<double>(0, 0);
+  math.Point<double> _lastViewportCenter = const math.Point<double>(double.nan, double.nan);
+  double _lastViewportZoom = double.nan;
 
   @override
   void didUpdateWidget(covariant UgmTileMap oldWidget) {
@@ -1968,13 +2115,7 @@ class _UgmTileMapState extends State<UgmTileMap> {
     }
   }
 
-  math.Point<double> world(double lat, double lon, [double? atZoom]) {
-    final scale = math.pow(2, atZoom ?? zoom).toDouble() * tileSize;
-    final x = (lon + 180) / 360 * scale;
-    final sinLat = math.sin(lat * math.pi / 180).clamp(-0.9999, 0.9999);
-    final y = (0.5 - math.log((1 + sinLat) / (1 - sinLat)) / (4 * math.pi)) * scale;
-    return math.Point(x, y);
-  }
+  math.Point<double> world(double lat, double lon, [double? atZoom]) => webMercator(lat, lon, atZoom ?? zoom);
 
   void setCenterFromWorld(math.Point<double> center, double atZoom) {
     final scale = math.pow(2, atZoom).toDouble() * tileSize;
@@ -2104,6 +2245,13 @@ class _UgmTileMapState extends State<UgmTileMap> {
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, size) {
     viewportSize = Size(size.maxWidth, size.maxHeight);
     final center = world(latitude, longitude);
+    // Notifikasi viewport untuk "Cari area ini" (Sprint 5.5) — hanya saat berubah.
+    if (widget.onViewportChanged != null &&
+        (_lastViewportZoom != zoom || (_lastViewportCenter.x - center.x).abs() > 1 || (_lastViewportCenter.y - center.y).abs() > 1)) {
+      _lastViewportCenter = center;
+      _lastViewportZoom = zoom;
+      widget.onViewportChanged!(center, zoom);
+    }
     final tileZoom = zoom.floor();
     final displayTileSize = tileSize * math.pow(2, zoom - tileZoom);
     final minX = ((center.x - size.maxWidth / 2) / displayTileSize).floor();
