@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:search_ugm_mobile/src/app.dart';
 import 'package:search_ugm_mobile/src/api_client.dart';
+import 'package:search_ugm_mobile/src/models.dart';
 
 void main() {
   testWidgets('app menampilkan navigasi utama tanpa profil', (tester) async {
@@ -29,6 +30,22 @@ void main() {
     final tech = buildSearchParameters(query: '', type: 'tech4disaster');
     expect(tech['type'], 'publication');
     expect(tech['publication_gok'], 'Tech4disaster');
+  });
+
+  test('buildSearchParameters mendukung pagination page (Sprint 3)', () {
+    expect(buildSearchParameters(query: 'beasiswa')['page'], '1');
+    expect(buildSearchParameters(query: 'beasiswa', page: 2)['page'], '2');
+    expect(buildSearchParameters(query: '', type: 'news', page: 3)['page'], '3');
+  });
+
+  test('SearchItem.fromJson membaca publish_date_text (Sprint 3)', () {
+    final item = SearchItem.fromJson({
+      'id': '1',
+      'name': 'Judul Berita',
+      'publish_date_text': '12 Agustus 2026',
+    });
+    expect(item.title, 'Judul Berita');
+    expect(item.publishDate, '12 Agustus 2026');
   });
 
   testWidgets('peta menerima gesture pinch-to-zoom tanpa error', (tester) async {

@@ -86,6 +86,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       HomeScreen(
+        api: api,
         onSearch: (query) => openSearch(query: query),
         onBrowse: (type) => openSearch(type: type),
         onAi: (prompt) => openAi(prompt: prompt),
@@ -129,12 +130,14 @@ class SectionTitle extends StatelessWidget {
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
+    required this.api,
     required this.onSearch,
     required this.onBrowse,
     required this.onAi,
     required this.onTools,
     required this.onMap,
   });
+  final ApiClient api;
   final ValueChanged<String> onSearch;
   final ValueChanged<String> onBrowse;
   final ValueChanged<String> onAi;
@@ -147,6 +150,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final controller = TextEditingController();
+  List<SearchItem> latest = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLatest();
+  }
+
+  /// Informasi terbaru dari API berita (Sprint 3.1) — gagal diam-diam.
+  Future<void> _loadLatest() async {
+    try {
+      final result = await widget.api.search(query: '', type: 'news', page: 1);
+      if (mounted) setState(() => latest = result.items.take(5).toList());
+    } catch (_) {
+      // Section tidak ditampilkan jika API tidak tersedia.
+    }
+  }
 
   static const explore = <({String label, String type, IconData icon})>[
     (label: 'Layanan', type: 'service', icon: Icons.apps),
@@ -265,24 +285,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [navy, ugmBlue], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+        // Search app bar sticky: logo+tagline di flexible space, field pencarian
+        // tetap menempel di atas saat halaman di-scroll (Sprint 3.1).
+        SliverAppBar(
+          pinned: true,
+          expandedHeight: 168,
+          backgroundColor: ugmBlue,
+          foregroundColor: Colors.white,
+          scrolledUnderElevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+          ),
+          flexibleSpace: FlexibleSpaceBar(
+            background: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [navy, ugmBlue], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 44, 20, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(children: [
+                        CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.school, color: ugmBlue)),
+                        SizedBox(width: 12),
+                        Expanded(child: Text('SEARCH UGM', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
+                        Chip(label: Text('DSH'), side: BorderSide.none),
+                      ]),
+                      const Spacer(),
+                      const Text('Ada yang bisa kami bantu hari ini?', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [
-                CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.school, color: ugmBlue)),
-                SizedBox(width: 12),
-                Expanded(child: Text('SEARCH UGM', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
-                Chip(label: Text('DSH'), side: BorderSide.none),
-              ]),
-              const SizedBox(height: 25),
-              const Text('Ada yang bisa kami bantu hari ini?', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              Semantics(
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(72),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Semantics(
                 textField: true,
                 label: 'Cari apa saja di UGM',
                 child: TextField(
@@ -306,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-            ]),
+            ),
           ),
         ),
         SliverPadding(
@@ -318,6 +362,24 @@ class _HomeScreenState extends State<HomeScreen> {
             )),
             const SizedBox(height: 10),
             quickAccessGrid(explore.take(6).toList()),
+            if (latest.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              const SectionTitle('Informasi Terbaru'),
+              const SizedBox(height: 10),
+              ...latest.map((item) => Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      dense: true,
+                      onTap: () => DeviceBridge.openUrl(item.url),
+                      leading: const Icon(Icons.newspaper_outlined, color: ugmBlue),
+                      title: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                      subtitle: item.publishDate.isNotEmpty
+                          ? Text(item.publishDate, style: const TextStyle(fontSize: 11, color: textSecondary))
+                          : null,
+                      trailing: const Icon(Icons.open_in_new, size: 15),
+                    ),
+                  )),
+            ],
             const SizedBox(height: 22),
             const SectionTitle('Fitur Khusus'),
             const SizedBox(height: 10),
@@ -414,6 +476,9 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
   int _requestSeq = 0;
   List<String> history = const [];
+  int _page = 1;
+  bool _hasMore = true;
+  bool _loadingMore = false;
 
   static const types = <String, String>{
     'all': 'Semua', 'service': 'Layanan', 'news': 'Berita', 'product': 'Produk', 'people': 'Dosen',
@@ -459,21 +524,46 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
     final seq = ++_requestSeq;
-    setState(() { loading = true; error = null; });
+    setState(() { loading = true; error = null; _page = 1; _hasMore = true; });
     try {
       if (controller.text.trim().isNotEmpty) {
         final old = await DeviceBridge.getHistory();
         await DeviceBridge.saveHistory([controller.text.trim(), ...old.where((item) => item != controller.text.trim())]);
         await _loadHistory();
       }
-      final result = await widget.api.search(query: controller.text, type: type, dharma: dharma, year: year);
+      final result = await widget.api.search(query: controller.text, type: type, dharma: dharma, year: year, page: 1);
       if (!mounted || seq != _requestSeq) return;
-      setState(() => response = result);
+      setState(() {
+        response = result;
+        _hasMore = result.items.length == 30;
+      });
     } catch (e) {
       if (!mounted || seq != _requestSeq) return;
       setState(() => error = '$e');
     } finally {
       if (mounted && seq == _requestSeq) setState(() => loading = false);
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (_loadingMore || !_hasMore || loading) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.api.search(query: controller.text, type: type, dharma: dharma, year: year, page: _page + 1);
+      if (!mounted) return;
+      setState(() {
+        _page += 1;
+        if (next.items.isEmpty) {
+          _hasMore = false;
+        } else {
+          response = SearchResponse(items: [...response!.items, ...next.items], total: response!.total);
+          _hasMore = next.items.length == 30;
+        }
+      });
+    } catch (_) {
+      // Halaman berikutnya gagal dimuat — tombol tetap bisa dicoba lagi.
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -645,7 +735,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (response!.items.isEmpty) return const _EmptyState(icon: Icons.search_off, title: 'Tidak ada hasil', subtitle: 'Coba kata kunci atau filter yang berbeda.');
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      itemCount: response!.items.length + 1,
+      itemCount: response!.items.length + 2,
       itemBuilder: (_, i) {
         if (i == 0) {
           final browseLabel = types[type] ?? 'Konten';
@@ -673,7 +763,30 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           );
         }
-        return ResultCard(item: response!.items[i - 1], query: controller.text);
+        final itemIndex = i - 1;
+        if (itemIndex >= response!.items.length) {
+          // Footer: muat lebih banyak / tidak ada hasil lain (Sprint 3.2).
+          if (_loadingMore) {
+            return const Padding(
+              padding: EdgeInsets.all(14),
+              child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))),
+            );
+          }
+          if (_hasMore) {
+            return Center(
+              child: TextButton.icon(
+                onPressed: loadMore,
+                icon: const Icon(Icons.expand_more),
+                label: const Text('Muat lebih banyak'),
+              ),
+            );
+          }
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Center(child: Text('Tidak ada hasil lain', style: TextStyle(fontSize: 12, color: textSecondary))),
+          );
+        }
+        return ResultCard(item: response!.items[itemIndex], query: controller.text);
       },
     );
   }
@@ -726,7 +839,16 @@ class ResultCard extends StatelessWidget {
             ),
             if (item.description.isNotEmpty) ...[const SizedBox(height: 4), Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textSecondary, height: 1.35, fontSize: 13))],
             const SizedBox(height: 7),
-            Row(children: [const Icon(Icons.verified_outlined, size: 15, color: ugmBlue), const SizedBox(width: 5), Expanded(child: Text(item.source, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: ugmBlue))), const Icon(Icons.open_in_new, size: 16)]),
+            Row(children: [
+              if (item.publishDate.isNotEmpty) ...[
+                Flexible(child: Text(item.publishDate, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: textSecondary))),
+                const SizedBox(width: 8),
+              ],
+              const Icon(Icons.verified_outlined, size: 15, color: ugmBlue),
+              const SizedBox(width: 5),
+              Expanded(child: Text(item.source, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: ugmBlue))),
+              const Icon(Icons.open_in_new, size: 16),
+            ]),
           ])),
         )),
       );

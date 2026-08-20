@@ -7,6 +7,7 @@ class SearchItem {
     required this.url,
     required this.source,
     this.dharma = '',
+    this.publishDate = '',
   });
 
   final String id;
@@ -16,6 +17,7 @@ class SearchItem {
   final String url;
   final String source;
   final String dharma;
+  final String publishDate;
 
   factory SearchItem.fromJson(Map<String, dynamic> json) => SearchItem(
         id: '${json['id'] ?? ''}',
@@ -25,6 +27,7 @@ class SearchItem {
         url: '${json['url'] ?? json['web_url'] ?? ''}',
         source: '${json['source_name'] ?? json['source_origin'] ?? json['source'] ?? 'UGM'}',
         dharma: '${json['dharma'] ?? ''}',
+        publishDate: '${json['publish_date_text'] ?? json['upload_date'] ?? ''}',
       );
 }
 

@@ -55,12 +55,14 @@ class ApiClient {
     String type = 'all',
     String dharma = '',
     String year = '',
+    int page = 1,
   }) async {
     final params = buildSearchParameters(
       query: query,
       type: type,
       dharma: dharma,
       year: year,
+      page: page,
     );
     final json = await _get(params);
     final data = (json['data'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
@@ -131,6 +133,7 @@ Map<String, String> buildSearchParameters({
   String type = 'all',
   String dharma = '',
   String year = '',
+  int page = 1,
 }) {
   final normalizedQuery = query.trim();
   final isBrowse = normalizedQuery.isEmpty;
@@ -140,7 +143,7 @@ Map<String, String> buildSearchParameters({
   final params = <String, String>{
     'action': isBrowse ? 'browse' : 'smart_search',
     if (!isBrowse) 'q': normalizedQuery,
-    'page': '1',
+    'page': '$page',
     'limit': '30',
   };
   if (isBrowse) {
