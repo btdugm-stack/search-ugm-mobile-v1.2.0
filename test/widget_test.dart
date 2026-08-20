@@ -8,7 +8,7 @@ void main() {
     await tester.pumpWidget(const SearchUgmApp());
 
     expect(find.text('SEARCH UGM'), findsOneWidget);
-    expect(find.text('Histori'), findsOneWidget);
+    expect(find.text('Histori'), findsNothing); // tab Histori dihapus (pindah ke Cari, Sprint 5)
     expect(find.text('Profil'), findsNothing);
     expect(find.text('Akses Cepat'), findsOneWidget);
     expect(find.text('Lihat semua (13)'), findsOneWidget);

@@ -95,7 +95,6 @@ class _MainShellState extends State<MainShell> {
       SearchScreen(key: ValueKey('$initialQuery-$initialType'), api: api, initialQuery: initialQuery, initialType: initialType),
       AiScreen(key: ValueKey('ai-$initialAiPrompt'), api: api, initialPrompt: initialAiPrompt),
       const ServicesScreen(),
-      const HistoryScreen(),
     ];
     return Scaffold(
       body: SafeArea(child: IndexedStack(index: index, children: pages)),
@@ -107,7 +106,6 @@ class _MainShellState extends State<MainShell> {
           NavigationDestination(icon: Icon(Icons.search), label: 'Cari'),
           NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'AI'),
           NavigationDestination(icon: Icon(Icons.apps_outlined), selectedIcon: Icon(Icons.apps), label: 'Layanan'),
-          NavigationDestination(icon: Icon(Icons.history), label: 'Histori'),
         ],
       ),
     );
