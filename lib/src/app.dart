@@ -11,13 +11,44 @@ import 'api_client.dart';
 import 'device_bridge.dart';
 import 'models.dart';
 
-const ugmBlue = Color(0xFF003F88);
-const navy = Color(0xFF071D49);
-const surface = Color(0xFFF5F7FB);
-
-// Design token Sprint 2 — teks sekunder aksesibel (WCAG AA 6.19:1 vs putih).
-const textSecondary = Color(0xFF616161);
-const textTertiary = Color(0xFF554E46);
+// ===== Design tokens (Sprint 1) — Bagian 7 planner =====
+// Brand (7.2–7.5)
+const ugmBlue = Color(0xFF003F88); // blue.700 — interactive
+const navy = Color(0xFF1A2B5E); // navy.800 — core Search UGM
+const navyDark = Color(0xFF0B142E); // navy.950 — splash/dark
+const navy900 = Color(0xFF14244D); // navy.900 — app bar gelap
+const navy50 = Color(0xFFEDF2F8); // navy.50 — selected container
+const goni = Color(0xFFC8973A); // goni.500 — signature accent
+const goni100 = Color(0xFFF7EFD8); // goni.100 — selected card
+const gold = Color(0xFFC8A951); // gold.500 — brand/status
+// Surface warm neutral (7.6)
+const canvas = Color(0xFFF5F0E8); // neutral.100 — primary warm background
+const ivory = Color(0xFFFDF8EF); // neutral.50 — ivory surface
+const surface = canvas; // alias scaffold
+const surfaceSelected = Color(0xFFF7EFD8); // goni.100
+const borderDefault = Color(0xFFDED8CC); // neutral.300
+// Text (7.8)
+const textSecondary = Color(0xFF616161); // teks sekunder (WCAG AA 6.19:1 vs putih)
+const textTertiary = Color(0xFF554E46); // neutral.700
+const textWarm = Color(0xFF3D3020); // neutral.800 — warm primary text
+const textDisabled = Color(0xFF7A746C); // disabled text
+// Semantic (7.7)
+const colorSuccess = Color(0xFF047857);
+const colorWarning = Color(0xFF92400E);
+const colorError = Color(0xFFB3261E);
+const colorInfo = Color(0xFF1D4ED8);
+const errorSurface = Color(0xFFFDECEC);
+const focusRing = goni; // focus ring goni
+// Spacing (grid 4dp)
+const spaceXs = 4.0;
+const spaceSm = 8.0;
+const spaceMd = 12.0;
+const spaceLg = 16.0;
+const spaceXl = 24.0;
+// Radius
+const radiusSm = 12.0;
+const radiusMd = 16.0;
+const radiusLg = 24.0;
 
 class SearchUgmApp extends StatelessWidget {
   const SearchUgmApp({super.key});
@@ -27,19 +58,52 @@ class SearchUgmApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Search UGM',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: ugmBlue, surface: surface),
-          scaffoldBackgroundColor: surface,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: ugmBlue,
+            primary: ugmBlue,
+            secondary: goni,
+            error: colorError,
+            surface: canvas,
+          ).copyWith(
+            primary: ugmBlue,
+            secondary: goni,
+            error: colorError,
+            surface: canvas,
+            onSurface: textWarm,
+          ),
+          scaffoldBackgroundColor: canvas,
           useMaterial3: true,
           fontFamily: 'Roboto',
           cardTheme: const CardThemeData(
             elevation: 0,
             margin: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+            color: Color(0xFFFFFFFF), // neutral.0 elevated
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(radiusMd))),
           ),
-          inputDecorationTheme: const InputDecorationTheme(
+          inputDecorationTheme: InputDecorationTheme(
             filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16)), borderSide: BorderSide.none),
+            fillColor: ivory,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(radiusMd)),
+              borderSide: const BorderSide(color: borderDefault),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(radiusMd)),
+              borderSide: const BorderSide(color: borderDefault),
+            ),
+          ),
+          dividerTheme: const DividerThemeData(color: borderDefault),
+          textTheme: const TextTheme(
+            headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: navy),
+            titleLarge: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: navy),
+            titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: navy),
+            bodyMedium: TextStyle(color: textWarm, height: 1.45),
+          ),
+          snackBarTheme: SnackBarThemeData(
+            backgroundColor: navy900,
+            contentTextStyle: const TextStyle(color: Colors.white),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm)),
           ),
         ),
         home: const MainShell(),
@@ -749,10 +813,10 @@ class _SearchScreenState extends State<SearchScreen> {
                   key: ValueKey('hist-$h'),
                   direction: DismissDirection.endToStart,
                   background: Container(
-                    color: const Color(0xFFFDECEC),
+                    color: errorSurface,
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 20),
-                    child: const Icon(Icons.delete_outline, color: Color(0xFFB3261E)),
+                    child: const Icon(Icons.delete_outline, color: colorError),
                   ),
                   onDismissed: (_) => _removeHistoryItem(h),
                   child: ListTile(
@@ -1095,7 +1159,7 @@ class _AiScreenState extends State<AiScreen> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: Material(
-                              color: const Color(0xFFEDF2F8),
+                              color: navy50,
                               borderRadius: BorderRadius.circular(12),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
