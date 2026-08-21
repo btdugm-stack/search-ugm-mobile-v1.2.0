@@ -542,14 +542,25 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE6EAF1)),
+          border: Border.all(color: borderDefault),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(item.icon, color: ugmBlue, size: 25),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: navy50,
+                child: Icon(item.icon, color: ugmBlue, size: 21),
+              ),
               const SizedBox(height: 7),
               Text(
                 item.label,
