@@ -127,4 +127,23 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(UgmTileMap), findsOneWidget);
   });
+
+  test('aiAnswerBlocks memisahkan paragraf dan poin (Fase 6)', () {
+    final blocks = aiAnswerBlocks(
+      'KKN adalah kegiatan pengabdian masyarakat.\n\n• Persiapan administrasi\n• Koordinasi dengan desa\n\nDaftar ulang dilakukan online.',
+    );
+    expect(blocks.length, 3);
+    expect(blocks[0].heading, isNull);
+    expect(blocks[1].heading, 'Poin utama');
+    expect(blocks[1].lines.length, 2);
+    expect(blocks[2].heading, isNull);
+  });
+
+  test('AdaptivePageBackground opacity mapping per state (Fase 1)', () {
+    expect(AdaptivePageBackground.opacityFor(PageVisualState.empty), 0.10);
+    expect(AdaptivePageBackground.opacityFor(PageVisualState.idle), 0.05);
+    expect(AdaptivePageBackground.opacityFor(PageVisualState.loading), 0.04);
+    expect(AdaptivePageBackground.opacityFor(PageVisualState.content), 0);
+    expect(AdaptivePageBackground.opacityFor(PageVisualState.error), 0);
+  });
 }

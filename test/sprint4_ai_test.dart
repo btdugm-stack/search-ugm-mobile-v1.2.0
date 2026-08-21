@@ -9,12 +9,11 @@ void main() {
       MaterialApp(home: Scaffold(body: AiScreen(api: ApiClient()))),
     );
 
-    // Empty state dengan 4 starter prompts
+    // Empty state: hero gradient + prompt cepat berkelompok (Fase 5)
     expect(find.text('Tanyakan apa saja tentang UGM'), findsOneWidget);
+    expect(find.text('Akademik'), findsOneWidget);
     expect(find.text('Apa tugas mahasiswa KKN?'), findsOneWidget);
     expect(find.text('Bagaimana cara daftar SIMASTER?'), findsOneWidget);
-    expect(find.text('Kapan pendaftaran beasiswa dibuka?'), findsOneWidget);
-    expect(find.text('Apa saja fasilitas di UGM?'), findsOneWidget);
 
     // Tombol kirim disabled saat input kosong
     final sendBtn = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.send));
