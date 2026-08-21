@@ -708,23 +708,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Panorama transition banner (Fase 2: 100–140 dp, opacity 8–10%).
-              const SizedBox(height: 22),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SizedBox(
-                  height: 120,
-                  width: double.infinity,
-                  child: const AdaptivePageBackground(
-                    asset: 'assets/background/bg-beranda.png',
-                    opacity: 0.09,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                  ),
-                ),
-              ),
               if (latest.isNotEmpty) ...[
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
                 const SectionTitle('Informasi Terbaru'),
                 const SizedBox(height: 10),
                 ...latest.map(
