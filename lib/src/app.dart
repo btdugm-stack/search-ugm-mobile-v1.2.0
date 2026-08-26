@@ -433,6 +433,20 @@ class _HomeScreenState extends State<HomeScreen> {
   final controller = TextEditingController();
   List<SearchItem> latest = const [];
 
+  /// Palet akses cepat dari pin referensi (palet 7 warna).
+  static const _aksesCepatPalet = [
+    Color(0xFFD7CEC6), // beige
+    Color(0xFFF4EDE7), // cream
+    Color(0xFF8B8878), // olive-hijau abu
+    Color(0xFFF2EBE4), // cream gelap
+    Color(0xFFACA79C), // taupe
+    Color(0xFF232B28), // hijau kehitaman
+    Color(0xFFCEC6BD), // beige gelap
+  ];
+
+  /// Warna kartu per tombol (diacak sekali per sesi, stabil saat rebuild).
+  late final List<Color> _tileColors = [..._aksesCepatPalet]..shuffle();
+
   @override
   void initState() {
     super.initState();
@@ -523,7 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisSpacing: 8,
                   childAspectRatio: 1.15,
                 ),
-                itemBuilder: (_, i) => _categoryTile(explore[i]),
+                itemBuilder: (_, i) => _categoryTile(explore[i], i),
               ),
             ],
           ),
@@ -532,7 +546,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _categoryTile(({String label, String type, IconData icon}) item) {
+  Widget _categoryTile(({String label, String type, IconData icon}) item, int index) {
+    final bg = _tileColors[index % _tileColors.length];
+    // Foreground menyesuaikan kecerahan kartu (kontras AA).
+    final fg = bg.computeLuminance() > 0.55
+        ? const Color(0xFF232B28) // hijau kehitaman di kartu terang
+        : const Color(0xFFFDF8EF); // ivory di kartu gelap
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: item.type == 'facility'
@@ -540,9 +559,9 @@ class _HomeScreenState extends State<HomeScreen> {
           : () => widget.onBrowse(item.type),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF4EDE7), // cream (palet pin)
+          color: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFD7CEC6)), // beige
+          border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -558,8 +577,8 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: const Color(0xFFFDF8EF), // ivory hangat
-                child: Icon(item.icon, color: const Color(0xFF232B28), size: 21),
+                backgroundColor: Colors.white,
+                child: Icon(item.icon, color: fg, size: 21),
               ),
               const SizedBox(height: 7),
               Text(
@@ -567,10 +586,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF232B28), // hijau kehitaman (palet pin)
+                  color: fg,
                 ),
               ),
             ],
@@ -597,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSpacing: 10,
           childAspectRatio: .95,
         ),
-        itemBuilder: (_, i) => _categoryTile(items[i]),
+        itemBuilder: (_, i) => _categoryTile(items[i], i),
       );
     }
 
