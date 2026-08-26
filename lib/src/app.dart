@@ -433,15 +433,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final controller = TextEditingController();
   List<SearchItem> latest = const [];
 
-  /// Palet akses cepat dari pin referensi (palet 7 warna).
+  /// Palet akses cepat dari pin referensi — soft tapi hidup:
+  /// cream, beige, peach (aksen utama gambar), sage, olive, hijau tua.
   static const _aksesCepatPalet = [
-    Color(0xFFD7CEC6), // beige
-    Color(0xFFF4EDE7), // cream
-    Color(0xFF8B8878), // olive-hijau abu
-    Color(0xFFF2EBE4), // cream gelap
-    Color(0xFFACA79C), // taupe
-    Color(0xFF232B28), // hijau kehitaman
-    Color(0xFFCEC6BD), // beige gelap
+    Color(0xFFF3ECE6), // cream
+    Color(0xFFD8CFC7), // beige muda
+    Color(0xFFB59261), // peach tanah (warna hidup gambar)
+    Color(0xFF46625B), // sage green
+    Color(0xFF888574), // olive abu
+    Color(0xFF1E2623), // hijau kehitaman
   ];
 
   /// Warna kartu per tombol (diacak sekali per sesi, stabil saat rebuild).
@@ -548,10 +548,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _categoryTile(({String label, String type, IconData icon}) item, int index) {
     final bg = _tileColors[index % _tileColors.length];
-    // Foreground menyesuaikan kecerahan kartu (kontras AA).
-    final fg = bg.computeLuminance() > 0.55
-        ? const Color(0xFF232B28) // hijau kehitaman di kartu terang
-        : const Color(0xFFFDF8EF); // ivory di kartu gelap
+    // Foreground dipilih via kontras WCAG — selalu yang lebih terbaca.
+    const ink = Color(0xFF1E2623);
+    const ivory = Color(0xFFFDF8EF);
+    final fg = _contrastRatio(ink, bg) >= _contrastRatio(ivory, bg) ? ink : ivory;
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: item.type == 'facility'
@@ -2378,9 +2378,22 @@ List<({String? heading, List<String> lines})> aiAnswerBlocks(String text) {
   return blocks;
 }
 
+/// Rasio kontras WCAG 2.x antara dua warna (1..21).
+double _contrastRatio(Color a, Color b) {
+  double lum(Color c) {
+    double ch(double v) {
+      final s = v / 255.0;
+      return s <= 0.03928 ? s / 12.92 : math.pow((s + 0.055) / 1.055, 2.4).toDouble();
+    }
+    return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
+  }
+  final la = lum(a), lb = lum(b);
+  final hi = math.max(la, lb), lo = math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 /// Ekstrak domain dari URL untuk label citation card (Sprint 4).
-String domainOf(String url) {
-  try {
+String domainOf(String url) {  try {
     return Uri.parse(url).host.replaceFirst(RegExp(r'^www\.'), '');
   } catch (_) {
     return '';
