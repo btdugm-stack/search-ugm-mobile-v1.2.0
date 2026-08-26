@@ -538,15 +538,15 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: item.type == 'facility'
           ? widget.onMap
           : () => widget.onBrowse(item.type),
-      child: Ink(
+      child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFFF4EDE7), // cream (palet pin)
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderDefault),
+          border: Border.all(color: const Color(0xFFD7CEC6)), // beige
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 6,
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 5,
               offset: const Offset(0, 2),
             ),
           ],
@@ -558,8 +558,8 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: navy50,
-                child: Icon(item.icon, color: ugmBlue, size: 21),
+                backgroundColor: const Color(0xFFFDF8EF), // ivory hangat
+                child: Icon(item.icon, color: const Color(0xFF232B28), size: 21),
               ),
               const SizedBox(height: 7),
               Text(
@@ -570,6 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
+                  color: Color(0xFF232B28), // hijau kehitaman (palet pin)
                 ),
               ),
             ],
@@ -592,8 +593,8 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: items.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossCount,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
           childAspectRatio: .95,
         ),
         itemBuilder: (_, i) => _categoryTile(items[i]),
