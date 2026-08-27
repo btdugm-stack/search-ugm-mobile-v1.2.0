@@ -377,7 +377,7 @@ class SectionTitle extends StatelessWidget {
           ),
         ),
       ),
-      ?trailing,
+      if (trailing != null) Flexible(child: trailing!),
     ],
   );
 }
@@ -474,17 +474,9 @@ class _HomeScreenState extends State<HomeScreen> {
       type: 'patent',
       icon: Icons.workspace_premium_outlined,
     ),
-    (
-      label: 'Tech4disaster',
-      type: 'tech4disaster',
-      icon: Icons.hub_outlined,
-    ),
+    (label: 'Tech4disaster', type: 'tech4disaster', icon: Icons.hub_outlined),
     (label: 'Produk Hukum', type: 'legal', icon: Icons.balance_outlined),
-    (
-      label: 'Pidato & Laporan',
-      type: 'pidato',
-      icon: Icons.campaign_outlined,
-    ),
+    (label: 'Pidato & Laporan', type: 'pidato', icon: Icons.campaign_outlined),
     (
       label: 'Fasilitas Kampus',
       type: 'facility',
@@ -546,53 +538,62 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _categoryTile(({String label, String type, IconData icon}) item, int index) {
+  Widget _categoryTile(
+    ({String label, String type, IconData icon}) item,
+    int index,
+  ) {
     final bg = _tileColors[index % _tileColors.length];
     // Foreground dipilih via kontras WCAG — selalu yang lebih terbaca.
     const ink = Color(0xFF1E2623);
     const ivory = Color(0xFFFDF8EF);
-    final fg = _contrastRatio(ink, bg) >= _contrastRatio(ivory, bg) ? ink : ivory;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: item.type == 'facility'
-          ? widget.onMap
-          : () => widget.onBrowse(item.type),
-      child: Container(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.white,
-                child: Icon(item.icon, color: fg, size: 21),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                item.label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: fg,
-                ),
+    final fg = _contrastRatio(ink, bg) >= _contrastRatio(ivory, bg)
+        ? ink
+        : ivory;
+    return Semantics(
+      button: true,
+      label: item.label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: item.type == 'facility'
+            ? widget.onMap
+            : () => widget.onBrowse(item.type),
+        child: Container(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
               ),
             ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white,
+                  child: Icon(item.icon, color: fg, size: 21),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  item.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -731,7 +732,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Akses Cepat',
                       trailing: TextButton(
                         onPressed: showAllCategories,
-                        child: Text('Lihat semua (${explore.length})'),
+                        child: Text('Lihat semua (${explore.length})', maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -2383,17 +2384,22 @@ double _contrastRatio(Color a, Color b) {
   double lum(Color c) {
     double ch(double v) {
       final s = v / 255.0;
-      return s <= 0.03928 ? s / 12.92 : math.pow((s + 0.055) / 1.055, 2.4).toDouble();
+      return s <= 0.03928
+          ? s / 12.92
+          : math.pow((s + 0.055) / 1.055, 2.4).toDouble();
     }
+
     return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
   }
+
   final la = lum(a), lb = lum(b);
   final hi = math.max(la, lb), lo = math.min(la, lb);
   return (hi + 0.05) / (lo + 0.05);
 }
 
 /// Ekstrak domain dari URL untuk label citation card (Sprint 4).
-String domainOf(String url) {  try {
+String domainOf(String url) {
+  try {
     return Uri.parse(url).host.replaceFirst(RegExp(r'^www\.'), '');
   } catch (_) {
     return '';

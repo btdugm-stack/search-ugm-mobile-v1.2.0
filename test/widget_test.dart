@@ -146,4 +146,34 @@ void main() {
     expect(AdaptivePageBackground.opacityFor(PageVisualState.content), 0);
     expect(AdaptivePageBackground.opacityFor(PageVisualState.error), 0);
   });
+
+  testWidgets('Beranda tidak overflow pada text scale 200% (Fase 9)', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final prevOnError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      debugPrint('F9 DETAILS:\n${details.toString()}');
+      prevOnError?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = prevOnError);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) =>
+            MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(2.0)), child: child!),
+        home: Scaffold(
+          body: HomeScreen(
+            api: ApiClient(),
+            onSearch: (_) {},
+            onBrowse: (_) {},
+            onAi: (_) {},
+            onTools: () {},
+            onMap: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }
