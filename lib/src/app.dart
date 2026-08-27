@@ -464,11 +464,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   static const explore = <({String label, String type, IconData icon})>[
-    (label: 'Layanan', type: 'service', icon: Icons.apps),
+    (label: 'Layanan', type: 'service', icon: Icons.apps_outlined),
     (label: 'Berita', type: 'news', icon: Icons.newspaper_outlined),
-    (label: 'Produk', type: 'product', icon: Icons.shopping_bag_outlined),
-    (label: 'Dosen / Tendik', type: 'people', icon: Icons.people_outline),
-    (label: 'Publikasi', type: 'publication', icon: Icons.article_outlined),
+    (label: 'Produk', type: 'product', icon: Icons.inventory_2_outlined),
+    (label: 'Dosen / Tendik', type: 'people', icon: Icons.badge_outlined),
+    (label: 'Publikasi', type: 'publication', icon: Icons.menu_book_outlined),
     (
       label: 'HKI / Paten',
       type: 'patent',
@@ -477,22 +477,22 @@ class _HomeScreenState extends State<HomeScreen> {
     (
       label: 'Tech4disaster',
       type: 'tech4disaster',
-      icon: Icons.emergency_outlined,
+      icon: Icons.hub_outlined,
     ),
-    (label: 'Produk Hukum', type: 'legal', icon: Icons.gavel_outlined),
+    (label: 'Produk Hukum', type: 'legal', icon: Icons.balance_outlined),
     (
       label: 'Pidato & Laporan',
       type: 'pidato',
-      icon: Icons.record_voice_over_outlined,
+      icon: Icons.campaign_outlined,
     ),
     (
       label: 'Fasilitas Kampus',
       type: 'facility',
-      icon: Icons.apartment_outlined,
+      icon: Icons.location_city_outlined,
     ),
     (label: 'Agenda / Acara', type: 'event', icon: Icons.event_outlined),
-    (label: 'Karir', type: 'karir', icon: Icons.work_outline),
-    (label: 'Video', type: 'video', icon: Icons.play_circle_outline),
+    (label: 'Karir', type: 'karir', icon: Icons.business_center_outlined),
+    (label: 'Video', type: 'video', icon: Icons.smart_display_outlined),
   ];
 
   // Contoh pertanyaan untuk card DSH Menjawab (Sprint 3.1).
