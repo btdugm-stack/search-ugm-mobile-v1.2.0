@@ -2229,7 +2229,6 @@ class _AiScreenState extends State<AiScreen> {
                               children: [
                                 TextButton.icon(
                                   style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                     ),
@@ -2243,7 +2242,6 @@ class _AiScreenState extends State<AiScreen> {
                                 ),
                                 TextButton.icon(
                                   style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                     ),
@@ -2257,7 +2255,6 @@ class _AiScreenState extends State<AiScreen> {
                                 ),
                                 TextButton.icon(
                                   style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                     ),
@@ -2274,7 +2271,6 @@ class _AiScreenState extends State<AiScreen> {
                                 ),
                                 TextButton.icon(
                                   style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                     ),
@@ -3140,9 +3136,9 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
       onSelectionChanged: (selection) =>
           setState(() => listMode = selection.first),
       showSelectedIcon: false,
+      // Fase 9: tap target minimal 48dp.
       style: const ButtonStyle(
-        visualDensity: VisualDensity.compact,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
     );
   }
