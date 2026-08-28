@@ -2594,9 +2594,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
             if (item.guideUrl.isNotEmpty)
               IconButton(
                 tooltip: 'Panduan penggunaan',
-                visualDensity: VisualDensity.compact,
                 onPressed: () => DeviceBridge.openUrl(item.guideUrl),
-                icon: const Icon(Icons.help_outline, size: 19),
+                icon: const Icon(Icons.help_outline, size: 22),
               ),
             const Icon(Icons.open_in_new, size: 18),
           ],
@@ -3401,7 +3400,7 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
                             const Spacer(),
                             TextButton.icon(
                               style: TextButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
+                                visualDensity: VisualDensity.standard,
                               ),
                               onPressed: _searchArea,
                               icon: const Icon(
