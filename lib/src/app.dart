@@ -266,9 +266,11 @@ class _MainShellState extends State<MainShell> {
   String initialQuery = '';
   String initialType = 'all';
   String initialAiPrompt = '';
+  int _searchNonce = 0; // memastikan tab Cari selalu refresh saat menu dipilih
 
   void openSearch({String query = '', String type = 'all'}) {
     setState(() {
+      _searchNonce++;
       initialQuery = query;
       initialType = type;
       index = 1;
@@ -297,7 +299,7 @@ class _MainShellState extends State<MainShell> {
         onMap: () => push(FacilityMapScreen(api: api)),
       ),
       SearchScreen(
-        key: ValueKey('$initialQuery-$initialType'),
+        key: ValueKey('search-$_searchNonce'),
         api: api,
         initialQuery: initialQuery,
         initialType: initialType,
@@ -398,11 +400,18 @@ class _LazyTab extends StatefulWidget {
 
 class _LazyTabState extends State<_LazyTab> {
   Widget? _built;
+  Key? _builtKey;
 
   @override
   Widget build(BuildContext context) {
     if (widget.active) {
-      _built ??= widget.builder(context);
+      // Rebuild bila widget child berganti key (mis. SearchScreen dengan
+      // query/type baru) — pertahankan state bila key sama.
+      final candidate = widget.builder(context);
+      if (_built == null || candidate.key != _builtKey) {
+        _built = candidate;
+        _builtKey = candidate.key;
+      }
       return _built!;
     }
     return _built ?? const SizedBox.shrink();
@@ -570,7 +579,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 4),
             // Area label seragam 2 baris (30dp) — semua tombol sejajar,
-            // avatar satu garis lurus antar kolom.
+            // avatar satu garis lurus antar kolom. Warna label distandarkan
+            // ink gelap: selalu terbaca di atas container ivory/cream.
             SizedBox(
               height: 30,
               child: Center(
@@ -579,10 +589,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: fg,
+                    color: ink,
                   ),
                 ),
               ),
