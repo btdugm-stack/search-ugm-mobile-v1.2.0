@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:share_plus/share_plus.dart';
@@ -1096,6 +1097,11 @@ class _SearchScreenState extends State<SearchScreen> {
         response = result;
         _hasMore = result.items.length == 30;
       });
+      // Fase 9: umumkan hasil ke screen reader (live region).
+      SemanticsService.announce(
+        '${result.total} hasil untuk ${controller.text.trim()}',
+        TextDirection.ltr,
+      );
     } catch (e) {
       if (!mounted || seq != _requestSeq) return;
       // State offline eksplisit (Sprint 3.2): SocketException/Timeout → pesan jaringan.
@@ -1942,9 +1948,9 @@ class _AiScreenState extends State<AiScreen> {
                   onSelectionChanged: (selection) =>
                       setState(() => smartMode = selection.first),
                   showSelectedIcon: false,
+                  // Fase 9: tap target minimal 48dp (hapus compact/shrinkWrap).
                   style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    tapTargetSize: MaterialTapTargetSize.padded,
                   ),
                 ),
               ],
@@ -2582,11 +2588,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
               tooltip: favorites.contains(item.name)
                   ? 'Hapus dari favorit'
                   : 'Tandai favorit',
-              visualDensity: VisualDensity.compact,
               onPressed: () => _toggleFavorite(item),
               icon: Icon(
                 favorites.contains(item.name) ? Icons.star : Icons.star_border,
-                size: 20,
+                size: 22,
                 color: favorites.contains(item.name) ? goni : textSecondary,
               ),
             ),
@@ -2747,8 +2752,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           ],
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 4,
+                              vertical: 14,
+                              horizontal: 6,
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -2762,7 +2767,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                                 Text(
                                   'Urutkan: ${sortLabels[sortMode]}',
                                   style: const TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                     color: ugmBlue,
                                   ),
