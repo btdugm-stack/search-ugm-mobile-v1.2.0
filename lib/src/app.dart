@@ -2794,25 +2794,31 @@ class _ServicesScreenState extends State<ServicesScreen> {
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
-                            ChoiceChip(
-                              label: const Text('Semua'),
-                              selected:
-                                  audienceFilter.isEmpty && !onlyFavorites,
-                              onSelected: (_) => setState(() {
-                                audienceFilter = '';
-                                onlyFavorites = false;
-                              }),
-                            ),
-                            ChoiceChip(
-                              avatar: Icon(
-                                Icons.star,
-                                size: 16,
-                                color: onlyFavorites ? Colors.white : goni,
+                            Padding(
+                              padding: const EdgeInsets.only(right: 7),
+                              child: ChoiceChip(
+                                label: const Text('Semua'),
+                                selected:
+                                    audienceFilter.isEmpty && !onlyFavorites,
+                                onSelected: (_) => setState(() {
+                                  audienceFilter = '';
+                                  onlyFavorites = false;
+                                }),
                               ),
-                              label: const Text('Favorit'),
-                              selected: onlyFavorites,
-                              onSelected: (_) => setState(
-                                () => onlyFavorites = !onlyFavorites,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 7),
+                              child: ChoiceChip(
+                                avatar: Icon(
+                                  Icons.star,
+                                  size: 16,
+                                  color: onlyFavorites ? Colors.white : goni,
+                                ),
+                                label: const Text('Favorit'),
+                                selected: onlyFavorites,
+                                onSelected: (_) => setState(
+                                  () => onlyFavorites = !onlyFavorites,
+                                ),
                               ),
                             ),
                             ...audiences
