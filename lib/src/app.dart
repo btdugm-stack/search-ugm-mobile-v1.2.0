@@ -432,6 +432,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final controller = TextEditingController();
+  final _quickController = ScrollController();
   List<SearchItem> latest = const [];
 
   /// Palet akses cepat dari pin referensi — soft tapi hidup:
@@ -497,6 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _quickController.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -530,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisSpacing: 8,
                   childAspectRatio: 1.15,
                 ),
-                itemBuilder: (_, i) => _categoryTile(explore[i], i),
+                itemBuilder: (_, i) => _categoryCarouselItem(explore[i], i),
               ),
             ],
           ),
@@ -539,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _categoryTile(
+  Widget _categoryCarouselItem(
     ({String label, String type, IconData icon}) item,
     int index,
   ) {
@@ -558,44 +560,27 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: item.type == 'facility'
             ? widget.onMap
             : () => widget.onBrowse(item.type),
-        child: Container(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white,
-                  child: Icon(item.icon, color: fg, size: 21),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  item.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: fg,
-                  ),
-                ),
-              ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 23,
+              backgroundColor: bg,
+              child: Icon(item.icon, color: fg, size: 24),
             ),
-          ),
+            const SizedBox(height: 6),
+            Text(
+              item.label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -603,22 +588,71 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Widget quickAccessGrid(
+    // Carousel horizontal akses cepat (gaya Grab): hemat ruang vertikal
+    // agar "Informasi Terbaru" terlihat tanpa scroll. Panah di kanan judul.
+    void scrollQuick(int dir) {
+      final target = _quickController.offset + dir * 3 * 76.0;
+      _quickController.animateTo(
+        target.clamp(0.0, _quickController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    Widget quickAccessCarousel(
       List<({String label, String type, IconData icon})> items,
     ) {
-      // 2 kolom di layar sempit / text scale besar (Sprint 3.1).
-      final crossCount = MediaQuery.sizeOf(context).width < 380 ? 2 : 3;
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: items.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossCount,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: .95,
+      const itemW = 76.0; // lebar tiap item carousel
+      return SizedBox(
+        height: 112, // cukup untuk label 2 baris pada text scale 200%
+        child: ListView.separated(
+          controller: _quickController,
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length + 1, // +1 item "Lihat semua"
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (_, i) {
+            if (i == items.length) {
+              // Item penutup: semua kategori.
+              return SizedBox(
+                width: itemW,
+                child: Semantics(
+                  button: true,
+                  label: 'Lihat semua kategori',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: showAllCategories,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircleAvatar(
+                          radius: 23,
+                          backgroundColor: Color(0xFFE6EDFF),
+                          child: Icon(Icons.apps, color: ugmBlue, size: 24),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Lihat semua',
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: ugmBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+            return SizedBox(
+              width: itemW,
+              child: _categoryCarouselItem(items[i], i),
+            );
+          },
         ),
-        itemBuilder: (_, i) => _categoryTile(items[i], i),
       );
     }
 
@@ -731,13 +765,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     SectionTitle(
                       'Akses Cepat',
-                      trailing: TextButton(
-                        onPressed: showAllCategories,
-                        child: Text('Lihat semua (${explore.length})', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Geser ke kiri',
+                            icon: const Icon(Icons.chevron_left, size: 20),
+                            color: ugmBlue,
+                            onPressed: () => scrollQuick(-1),
+                          ),
+                          IconButton(
+                            tooltip: 'Geser ke kanan',
+                            icon: const Icon(Icons.chevron_right, size: 20),
+                            color: ugmBlue,
+                            onPressed: () => scrollQuick(1),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    quickAccessGrid(explore.take(6).toList()),
+                    const SizedBox(height: 4),
+                    quickAccessCarousel(explore.take(6).toList()),
                   ],
                 ),
               ),
@@ -3136,9 +3183,7 @@ class _FacilityMapScreenState extends State<FacilityMapScreen> {
           setState(() => listMode = selection.first),
       showSelectedIcon: false,
       // Fase 9: tap target minimal 48dp.
-      style: const ButtonStyle(
-        tapTargetSize: MaterialTapTargetSize.padded,
-      ),
+      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.padded),
     );
   }
 
