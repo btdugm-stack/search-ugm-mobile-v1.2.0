@@ -20,18 +20,22 @@ void main() {
   testWidgets('Beranda: 6 kategori utama, DSH card contoh prompt, Rekomendasi (Sprint 3.1)', (tester) async {
     await tester.pumpWidget(const SearchUgmApp());
 
-    // Hanya 6 kategori utama yang tampil; sisanya lewat bottom sheet
+    // Carousel 2 baris: 13 kategori tampil dengan geser horizontal,
+    // 'Lihat semua' di akhir.
     expect(find.text('Akses Cepat'), findsOneWidget);
-    expect(find.text('Lihat semua (13)'), findsOneWidget);
-    expect(find.text('Video'), findsNothing); // kategori ke-13 tidak di grid utama
-    expect(find.text('Fasilitas Kampus'), findsNothing);
+    expect(find.text('Tech4disaster'), findsOneWidget); // kategori ke-7 di carousel
+
+    // Geser carousel untuk memunculkan 'Lihat semua'.
+    await tester.drag(find.text('Akses Cepat'), const Offset(-500, 0));
+    await tester.pumpAndSettle();
 
     // Bottom sheet kategori lengkap
-    await tester.tap(find.text('Lihat semua (13)'));
+    await tester.tap(find.text('Lihat semua'));
     await tester.pumpAndSettle();
     expect(find.text('Semua Kategori'), findsOneWidget);
-    expect(find.text('Video'), findsOneWidget);
-    expect(find.text('Fasilitas Kampus'), findsOneWidget);
+    // Carousel di belakang modal ikut terhitung — minimal 1 dari bottom sheet.
+    expect(find.text('Video'), findsWidgets);
+    expect(find.text('Fasilitas Kampus'), findsWidgets);
 
     // Tutup sheet, lalu scroll ke bawah sampai card DSH terlihat (deterministik)
     await closeSheet(tester);
