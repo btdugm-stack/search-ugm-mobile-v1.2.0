@@ -432,7 +432,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final controller = TextEditingController();
-  final _quickController = ScrollController();
   List<SearchItem> latest = const [];
 
   /// Palet akses cepat dari pin referensi — soft tapi hidup:
@@ -498,7 +497,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _quickController.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -564,18 +562,18 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 23,
+              radius: 19,
               backgroundColor: bg,
-              child: Icon(item.icon, color: fg, size: 24),
+              child: Icon(item.icon, color: fg, size: 20),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               item.label,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: 10,
                 fontWeight: FontWeight.w700,
                 color: fg,
               ),
@@ -588,71 +586,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Carousel horizontal akses cepat (gaya Grab): hemat ruang vertikal
-    // agar "Informasi Terbaru" terlihat tanpa scroll. Panah di kanan judul.
-    void scrollQuick(int dir) {
-      final target = _quickController.offset + dir * 3 * 76.0;
-      _quickController.animateTo(
-        target.clamp(0.0, _quickController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-      );
-    }
-
-    Widget quickAccessCarousel(
+    // Daftar tombol akses cepat: 2 baris x 3 kolom, ikon ringkas — hemat
+    // ruang vertikal agar "Informasi Terbaru" terlihat tanpa scroll.
+    Widget quickAccessGrid(
       List<({String label, String type, IconData icon})> items,
     ) {
-      const itemW = 76.0; // lebar tiap item carousel
-      return SizedBox(
-        height: 112, // cukup untuk label 2 baris pada text scale 200%
-        child: ListView.separated(
-          controller: _quickController,
-          scrollDirection: Axis.horizontal,
-          itemCount: items.length + 1, // +1 item "Lihat semua"
-          separatorBuilder: (_, __) => const SizedBox(width: 10),
-          itemBuilder: (_, i) {
-            if (i == items.length) {
-              // Item penutup: semua kategori.
-              return SizedBox(
-                width: itemW,
-                child: Semantics(
-                  button: true,
-                  label: 'Lihat semua kategori',
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: showAllCategories,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircleAvatar(
-                          radius: 23,
-                          backgroundColor: Color(0xFFE6EDFF),
-                          child: Icon(Icons.apps, color: ugmBlue, size: 24),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Lihat semua',
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: ugmBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }
-            return SizedBox(
-              width: itemW,
-              child: _categoryCarouselItem(items[i], i),
-            );
-          },
-        ),
+      // 2 baris x 3 kolom manual: tinggi mengikuti konten (aman di text scale
+      // besar, ringkas di skala normal).
+      Widget row(List<({String label, String type, IconData icon})> rowItems) => Row(
+        children: [
+          for (var i = 0; i < rowItems.length; i++) ...[
+            Expanded(child: _categoryCarouselItem(rowItems[i], items.indexOf(rowItems[i]))),
+            if (i < rowItems.length - 1) const SizedBox(width: 8),
+          ],
+        ],
+      );
+      return Column(
+        children: [
+          row(items.sublist(0, 3)),
+          const SizedBox(height: 8),
+          row(items.sublist(3)),
+        ],
       );
     }
 
@@ -765,26 +719,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     SectionTitle(
                       'Akses Cepat',
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            tooltip: 'Geser ke kiri',
-                            icon: const Icon(Icons.chevron_left, size: 20),
-                            color: ugmBlue,
-                            onPressed: () => scrollQuick(-1),
-                          ),
-                          IconButton(
-                            tooltip: 'Geser ke kanan',
-                            icon: const Icon(Icons.chevron_right, size: 20),
-                            color: ugmBlue,
-                            onPressed: () => scrollQuick(1),
-                          ),
-                        ],
+                      trailing: TextButton(
+                        onPressed: showAllCategories,
+                        child: Text(
+                          'Lihat semua (${explore.length})',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    quickAccessCarousel(explore.take(6).toList()),
+                    const SizedBox(height: 8),
+                    quickAccessGrid(explore.take(6).toList()),
                   ],
                 ),
               ),
