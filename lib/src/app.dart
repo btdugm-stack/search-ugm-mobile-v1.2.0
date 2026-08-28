@@ -569,15 +569,22 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Icon(item.icon, color: fg, size: 20),
             ),
             const SizedBox(height: 4),
-            Text(
-              item.label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: fg,
+            // Area label seragam 2 baris (30dp) — semua tombol sejajar,
+            // avatar satu garis lurus antar kolom.
+            SizedBox(
+              height: 30,
+              child: Center(
+                child: Text(
+                  item.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
               ),
             ),
           ],
@@ -628,15 +635,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Icon(Icons.apps, color: ugmBlue, size: 20),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Lihat semua',
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: ugmBlue,
+                  // Area label seragam (sama dengan item kategori).
+                  SizedBox(
+                    height: 30,
+                    child: Center(
+                      child: Text(
+                        'Lihat semua',
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: ugmBlue,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -647,30 +660,64 @@ class _HomeScreenState extends State<HomeScreen> {
         return _categoryCarouselItem(items[idx], idx);
       }
 
-      return SingleChildScrollView(
-        controller: _quickController,
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (var i = 0; i < pairs.length; i++) ...[
-              if (i > 0) const SizedBox(width: 10),
-              SizedBox(
-                width: itemW,
-                child: Column(
-                  children: [
-                    cell(pairs[i].length > 0 ? items.indexOf(pairs[i][0]) : 0),
-                    const SizedBox(height: 12),
-                    cell(
-                      pairs[i].length > 1
-                          ? items.indexOf(pairs[i][1])
-                          : items.length,
+      // Cell min-tinggi SERAGAM (84dp): tombol sejajar antar kolom, label 2
+      // baris tampil penuh; di text scale besar tinggi mengikuti konten.
+      Widget cellFixed(int idx) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 84),
+        child: Center(child: cell(idx)),
+      );
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SingleChildScrollView(
+            controller: _quickController,
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var i = 0; i < pairs.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 10),
+                  SizedBox(
+                    width: itemW,
+                    child: Column(
+                      children: [
+                        cellFixed(
+                          pairs[i].length > 0 ? items.indexOf(pairs[i][0]) : 0,
+                        ),
+                        const SizedBox(height: 12),
+                        cellFixed(
+                          pairs[i].length > 1
+                              ? items.indexOf(pairs[i][1])
+                              : items.length,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // Kontrol next/previous tepat di bawah carousel, rata kanan —
+          // dekat konten yang digeser, mudah dijangkau.
+          const SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                tooltip: 'Sebelumnya',
+                icon: const Icon(Icons.chevron_left, size: 22),
+                color: ugmBlue,
+                onPressed: () => scrollQuick(-1),
+              ),
+              IconButton(
+                tooltip: 'Berikutnya',
+                icon: const Icon(Icons.chevron_right, size: 22),
+                color: ugmBlue,
+                onPressed: () => scrollQuick(1),
               ),
             ],
-          ],
-        ),
+          ),
+        ],
       );
     }
 
@@ -781,26 +828,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    SectionTitle(
-                      'Daftar Informasi',
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            tooltip: 'Geser ke kiri',
-                            icon: const Icon(Icons.chevron_left, size: 20),
-                            color: ugmBlue,
-                            onPressed: () => scrollQuick(-1),
-                          ),
-                          IconButton(
-                            tooltip: 'Geser ke kanan',
-                            icon: const Icon(Icons.chevron_right, size: 20),
-                            color: ugmBlue,
-                            onPressed: () => scrollQuick(1),
-                          ),
-                        ],
-                      ),
-                    ),
+                    SectionTitle('Daftar Informasi'),
                     const SizedBox(height: 6),
                     quickAccessCarousel2Row(explore),
                   ],
