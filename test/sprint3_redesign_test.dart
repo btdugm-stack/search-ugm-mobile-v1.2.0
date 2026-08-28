@@ -22,11 +22,11 @@ void main() {
 
     // Carousel 2 baris: 13 kategori tampil dengan geser horizontal,
     // 'Lihat semua' di akhir.
-    expect(find.text('Akses Cepat'), findsOneWidget);
+    expect(find.text('Daftar Informasi'), findsOneWidget);
     expect(find.text('Tech4disaster'), findsOneWidget); // kategori ke-7 di carousel
 
     // Geser carousel untuk memunculkan 'Lihat semua'.
-    await tester.drag(find.text('Akses Cepat'), const Offset(-500, 0));
+    await tester.drag(find.text('Daftar Informasi'), const Offset(-500, 0));
     await tester.pumpAndSettle();
 
     // Bottom sheet kategori lengkap

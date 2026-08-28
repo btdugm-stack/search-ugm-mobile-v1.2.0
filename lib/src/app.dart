@@ -782,7 +782,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     SectionTitle(
-                      'Akses Cepat',
+                      'Daftar Informasi',
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

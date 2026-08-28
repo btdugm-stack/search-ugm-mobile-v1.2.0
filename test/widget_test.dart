@@ -11,10 +11,10 @@ void main() {
     expect(find.text('SEARCH UGM'), findsOneWidget);
     expect(find.text('Histori'), findsNothing); // tab Histori dihapus (pindah ke Cari, Sprint 5)
     expect(find.text('Profil'), findsNothing);
-    expect(find.text('Akses Cepat'), findsOneWidget);
+    expect(find.text('Daftar Informasi'), findsOneWidget);
 
     // 'Lihat semua' = tombol di akhir carousel 2 baris (geser horizontal dulu).
-    await tester.drag(find.text('Akses Cepat'), const Offset(-500, 0));
+    await tester.drag(find.text('Daftar Informasi'), const Offset(-500, 0));
     await tester.pumpAndSettle();
     expect(find.text('Lihat semua'), findsOneWidget);
 
