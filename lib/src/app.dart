@@ -442,6 +442,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final controller = TextEditingController();
   final _quickController = ScrollController();
+  final _newsController = PageController(viewportFraction: 0.92);
+  int _newsPage = 0;
   List<SearchItem> latest = const [];
 
   /// Palet akses cepat dari pin referensi — soft tapi hidup:
@@ -508,6 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _quickController.dispose();
+    _newsController.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -860,38 +863,156 @@ class _HomeScreenState extends State<HomeScreen> {
               if (latest.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const SectionTitle('Informasi Terbaru'),
-                const SizedBox(height: 10),
-                ...latest.map(
-                  (item) => Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      dense: true,
-                      onTap: () => DeviceBridge.openUrl(item.url),
-                      leading: const Icon(
-                        Icons.newspaper_outlined,
-                        color: ugmBlue,
-                      ),
-                      title: Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
+                const SizedBox(height: 4),
+                // Carousel geser (sliding): 5 berita terbaru, peek kartu
+                // berikutnya sebagai isyarat geser + indikator titik.
+                Builder(
+                  builder: (context) {
+                    // Tinggi menyesuaikan skala teks (aman di text scale 200%).
+                    final s = MediaQuery.textScalerOf(context).scale(1.0);
+                    return Column(
+                      children: [
+                        SizedBox(
+                          height: 142 * s,
+                          child: PageView.builder(
+                            controller: _newsController,
+                            itemCount: latest.length,
+                            onPageChanged: (i) =>
+                                setState(() => _newsPage = i),
+                            itemBuilder: (_, i) {
+                              final item = latest[i];
+                              return Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  2,
+                                  6,
+                                  2,
+                                  2,
+                                ),
+                                child: Card(
+                                  margin: EdgeInsets.zero,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    side: const BorderSide(
+                                      color: borderDefault,
+                                    ),
+                                  ),
+                                  color: Colors.white,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: () =>
+                                        DeviceBridge.openUrl(item.url),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        14,
+                                        10,
+                                        14,
+                                        8,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.newspaper_outlined,
+                                                size: 16,
+                                                color: ugmBlue,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  item.publishDate.isNotEmpty
+                                                      ? item.publishDate
+                                                      : 'Berita UGM',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 10.5,
+                                                    color: textSecondary,
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                              const Icon(
+                                                Icons.open_in_new,
+                                                size: 13,
+                                                color: textTertiary,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Expanded(
+                                            child: Text(
+                                              item.title,
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 13.5,
+                                                height: 1.25,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          const Row(
+                                            children: [
+                                              Text(
+                                                'Baca berita',
+                                                style: TextStyle(
+                                                  fontSize: 10.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: ugmBlue,
+                                                ),
+                                              ),
+                                              SizedBox(width: 2),
+                                              Icon(
+                                                Icons.arrow_forward_rounded,
+                                                size: 12,
+                                                color: ugmBlue,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      subtitle: item.publishDate.isNotEmpty
-                          ? Text(
-                              item.publishDate,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: textSecondary,
-                              ),
-                            )
-                          : null,
-                      trailing: const Icon(Icons.open_in_new, size: 15),
-                    ),
-                  ),
+                        if (latest.length > 1) ...[
+                          const SizedBox(height: 6),
+                          ExcludeSemantics(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                for (var d = 0; d < latest.length; d++)
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 3,
+                                    ),
+                                    width: d == _newsPage ? 16 : 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: d == _newsPage
+                                          ? ugmBlue
+                                          : const Color(0xFFCFC9BD),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
               ],
               const SizedBox(height: 22),
