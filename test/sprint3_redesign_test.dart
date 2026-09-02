@@ -39,10 +39,10 @@ void main() {
 
     // Tutup sheet, lalu scroll ke bawah sampai card DSH terlihat (deterministik)
     await closeSheet(tester);
-    for (var i = 0; i < 8 && !tester.any(find.text('Search UGM Menjawab')); i++) {
+    for (var i = 0; i < 8 && !tester.any(find.text('UGM Apps Menjawab')); i++) {
       await scrollHome(tester, -400);
     }
-    expect(find.text('Search UGM Menjawab'), findsOneWidget);
+    expect(find.text('UGM Apps Menjawab'), findsOneWidget);
     expect(find.text('Apa saja mahasiswa KKN?'), findsOneWidget);
     expect(find.text('Bagaimana cara daftar SIMASTER?'), findsOneWidget);
 

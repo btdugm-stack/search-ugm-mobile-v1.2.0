@@ -175,7 +175,7 @@ class SearchUgmApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
-    title: 'Search UGM',
+    title: 'UGM Apps',
     theme: ThemeData(
       colorScheme:
           ColorScheme.fromSeed(
@@ -737,7 +737,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // tetap menempel di atas saat halaman di-scroll (Sprint 3.1).
         SliverAppBar(
           pinned: true,
-          expandedHeight: 180,
+          expandedHeight: 190,
           backgroundColor: ugmBlue,
           foregroundColor: Colors.white,
           scrolledUnderElevation: 0,
@@ -756,20 +756,20 @@ class _HomeScreenState extends State<HomeScreen> {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 44, 20, 14),
+                  padding: const EdgeInsets.fromLTRB(20, 36, 20, 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           CircleAvatar(
-                            radius: 26,
+                            radius: 20,
                             backgroundColor: Colors.white,
                             child: ClipOval(
                               child: Image.asset(
                                 'assets/icon/app_icon.png',
-                                width: 44,
-                                height: 44,
+                                width: 32,
+                                height: 32,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -777,15 +777,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Text(
-                              'SEARCH UGM',
+                              'UGM APPS',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 21,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w900,
+                                letterSpacing: 0.4,
                               ),
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 3),
+                      const Text(
+                        // Tagline branding: Merakyat, Mandiri, Berkelanjutan.
+                        'Merakyat, Mandiri dan Berkelanjutan',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Color(0xD9FFFFFF),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const Spacer(),
                     ],
@@ -925,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Search UGM Menjawab',
+                              'UGM Apps Menjawab',
                               style: TextStyle(fontWeight: FontWeight.w800),
                             ),
                           ),
@@ -2030,7 +2043,7 @@ class _AiScreenState extends State<AiScreen> {
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'Search UGM',
+                    'UGM Apps',
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
                   ),
                 ),
@@ -2106,7 +2119,7 @@ class _AiScreenState extends State<AiScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   const Text(
-                                    'Search UGM AI',
+                                    'UGM Apps AI',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 17,
@@ -3048,7 +3061,7 @@ class ToolsAiScreen extends StatelessWidget {
               ),
               SizedBox(height: 5),
               Text(
-                'Akses kumpulan alat AI pada versi web Search UGM.',
+                'Akses kumpulan alat AI pada versi web UGM Apps.',
                 style: TextStyle(color: Colors.white70),
               ),
             ],

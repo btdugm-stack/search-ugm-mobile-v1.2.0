@@ -8,7 +8,7 @@ void main() {
   testWidgets('app menampilkan navigasi utama tanpa profil', (tester) async {
     await tester.pumpWidget(const SearchUgmApp());
 
-    expect(find.text('SEARCH UGM'), findsOneWidget);
+    expect(find.text('UGM APPS'), findsOneWidget);
     expect(find.text('Histori'), findsNothing); // tab Histori dihapus (pindah ke Cari, Sprint 5)
     expect(find.text('Profil'), findsNothing);
     expect(find.text('Daftar Informasi'), findsOneWidget);
